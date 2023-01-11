@@ -190,9 +190,13 @@ mapServer <- function(id){
         db$windlab <- as.character(db$`wind speed`)
         db$windlab[1:length(db$windlab) %% 6 != 1] <- NA
         
+        db$shortLab <- db$shortForecast
+        db$shortLab[1:length(db$shortLab) %% 8 != 1] <- NA
+        
         pTemp <- ggplot(data = db, aes(x=Time, y=temperature, color=NightDay)) + 
           geom_line(lwd=1.2) + 
           geom_text(aes(y=temperature,label=templab),vjust=-1, size=6) +
+          geom_text(aes(y=max(temperature)+30, label=shortLab), color="darkblue", angle=80, size=5) +
           scale_x_datetime(labels = date_format("%a %H", tz=tz), breaks="6 hours") +
           xlab("Time") + 
           theme(axis.text.x=element_text(angle=45,hjust=1), text = element_text(size = 20)) +
@@ -200,7 +204,7 @@ mapServer <- function(id){
           scale_colour_gradient(low="black",high="orange") +
           geom_hline(yintercept = 32, color ="darkblue", lty=2) +
           ggtitle(paste0("Temperature forecast")) +
-          ylim(min(db$temperature),max(db$temperature)+4)
+          ylim(min(db$temperature),max(db$temperature)+45)
         
         pWind <- ggplot(data = db, aes(x=Time, y=`wind speed`, color=NightDay)) + 
           geom_line(lwd=1.2) + 

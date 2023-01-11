@@ -1,5 +1,7 @@
 *.Rproj
 rsconnect/*
+*.pdf
+*.html
 
 # History files
 .Rhistory
