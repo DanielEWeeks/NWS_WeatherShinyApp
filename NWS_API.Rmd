@@ -1,0 +1,505 @@
+---
+title: "National Weather Service API"
+author: "Daniel E. Weeks"
+date: "`r format(Sys.time(), '%B %d, %Y, %R')`"
+header-includes:
+- \usepackage{pdflscape}
+- \newcommand{\blandscape}{\begin{landscape}}
+- \newcommand{\elandscape}{\end{landscape}}
+output:
+  pdf_document:
+    toc: true
+    number_sections: true
+    toc_depth: 3
+  html_document:
+    df_print: paged
+    toc: true
+    number_sections: true
+    toc_depth: '3'
+    code_folding: show
+#   md_extensions: +raw_attribute
+---
+
+```{r,echo=FALSE,message=FALSE,warning=FALSE}
+require(knitr)
+# Set so that long lines in R will be wrapped:
+opts_chunk$set(tidy.opts=list(width.cutoff=80),tidy=TRUE)
+```
+
+```{r,echo=FALSE}
+# In the event of a crash, save the working space on exit:
+save_all <- function() {
+  save.image("recover.RData")
+}
+options(error = save_all)
+```
+
+
+# Load Libraries
+
+```{r load_libraries,message=FALSE}
+library(tidyverse)
+library(tidylog)
+library(jsonlite)
+library(httr)
+library(zipcodeR)
+library(zipcode)
+library(scales)
+library(lutz)
+library(ggExtra)
+library(patchwork)
+library(lubridate)
+library(ggrepel)
+```
+
+# Input directory and files 
+
+```{r}
+# Print the working directory
+getwd()
+```
+The input files used in this analysis are ... and can be found in ... 
+
+# Functions
+
+## coord_y_datetime
+
+From https://stackoverflow.com/questions/43625341/reverse-datetime-posixct-data-axis-in-ggplot
+
+```{r}
+coord_y_datetime <- function(xlim = NULL, ylim = NULL, expand = TRUE) {
+  if (!is.null(ylim)) {
+    ylim <- lubridate::as_datetime(ylim)
+  }
+  ggplot2::coord_cartesian(xlim = xlim, ylim = ylim, expand = expand)
+}
+```
+
+# National Weather Service API
+
+Joe Guiness has a YouTube video that shows how to access the NWS API
+
+https://youtu.be/hxl1c8WRNiA
+
+This code is based on Joe Guiness' YouTube tutorial:
+
+```{r}
+# Pittsburgh
+lon <- -79.9959
+lat <- 40.4406
+
+# Look up latitude and longitude from the zip code
+lat.long <- geocode_zip("15217")
+lat <- lat.long$lat
+lon <- lat.long$lng
+
+
+# Home: 40 26' 2" N  79 54' 55" W
+# 40.43389, -79.91528
+lon <- -1* (79 + (54/60) + (55/3600))
+lat <- 40 + (26/60) + (2/3600)
+
+# Look up latitude and longitude from the zip code
+zip <- 15217
+data(zipcode)
+lat.long <- zipcode[zipcode$zip==zip,c("latitude","longitude")]
+lat <- lat.long[1]
+lon <- lat.long[2]
+
+# Home: 40.433810, -79.915280
+#       40.433673661058684	-79.91517223628321
+#       40.43362	  -79.91536
+#       40.4338467, -79.9153318
+#       40.43400083686655, -79.91533284458444 <= Google Maps
+lon <- -79.91533284458444
+lat <- 40.43400083686655
+
+
+
+get_NWS_data <- function(lat, lon) {
+  myurl <- paste0("https://api.weather.gov/points/",lat,",",lon)
+  weather_list <- fromJSON(myurl)
+} 
+
+weather_list <- get_NWS_data(lat,lon)
+
+get_forecast <- function(weather_list) {
+  sv <- GET(weather_list$properties$forecast)
+  forecast <- fromJSON(content(sv, as="text", encoding = "UTF-8"))
+  forecast$properties$city <- weather_list$properties$relativeLocation$properties$city
+   forecast$properties$state <- weather_list$properties$relativeLocation$properties$state
+    forecast$properties$coordinates <- weather_list$properties$relativeLocation$geometry$coordinates
+    class(forecast) <- "weather_forecast"
+    return(forecast)
+}
+
+forecast <- get_forecast(weather_list)
+
+
+print.weather_forecast <- function(forecast, nperiods = NULL) {
+  fdb <- forecast$properties$periods
+  if (is.null( nperiods)) {
+    nperiods <- nrow(fdb)
+  }  
+  
+  start_times <- fdb$startTime
+  start_dates <- as.POSIXct(substr(start_times, 1, 19), format="%FT%T")
+  end_times <- fdb$endTime
+  end_dates <- as.POSIXct(substr(end_times, 1, 19), format="%FT%T")
+  
+  st0 <- paste0("Forecast for ", forecast$properties$city,", ",
+                forecast$properties$state," (",
+                forecast$properties$coordinates[2], ", ",
+                forecast$properties$coordinates[1], ")")
+  cat(st0,"\n\n")
+  
+  for (j in 1:nperiods) {
+    st1 <- paste0(fdb$name[j]," ", format(start_dates[j], "%F"), ": ",
+                  fdb$shortForecast[j],"\n")
+                  
+    cat(st1)
+    if (fdb$isDaytime[j]) {
+      prefix <- "High: "
+    } else {
+      prefix <- "Low: "
+    }
+    st1b <- paste0(prefix,fdb$temperature[j], " ", fdb$temperatureUnit[j],"; ",
+                  fdb$windDirection[j]," winds ", fdb$windSpeed[j] ,"\n")
+    cat(st1b)
+    st2 <- strsplit( fdb$detailedForecast[j], " ")[[1]]
+    cat(st2, fill = TRUE)
+    cat("\n")
+  }
+}
+```
+
+## Forecast 
+
+```{r, comment=""}
+forecast
+```
+
+## Hourly forecast
+
+```{r}
+get_hourly_forecast <- function(weather_list) {
+  sv <- GET(weather_list$properties$forecastHourly)
+  forecast <- fromJSON(content(sv, as="text", encoding = "UTF-8"))
+  forecast$properties$city <- weather_list$properties$relativeLocation$properties$city
+   forecast$properties$state <- weather_list$properties$relativeLocation$properties$state
+    forecast$properties$coordinates <- weather_list$properties$relativeLocation$geometry$coordinates
+    class(forecast) <- "hourly_forecast"
+    return(forecast)
+}
+
+hourly_forecast <- get_hourly_forecast(weather_list)
+
+db <- hourly_forecast$properties$periods
+db$Time <- as.POSIXct(db$startTime, format="%FT%T")
+
+tz <- tz_lookup_coords(lat = lat, lon = lon, method = "accurate")
+
+db$NightDay <- as.numeric(db$isDaytime)
+
+db$templab <- as.character(round(db$temperature,0))
+db$templab[1:length(db$templab) %% 6 != 1] <- NA
+
+st0 <- paste0("Forecast for ", forecast$properties$city,", ",
+                forecast$properties$state," (",
+                round(forecast$properties$coordinates[2],3), ", ",
+                round(forecast$properties$coordinates[1],3), ")")
+
+db$`wind speed` <- as.numeric(gsub(" mph","",db$windSpeed))
+db$windlab <- as.character(db$`wind speed`)
+db$windlab[1:length(db$windlab) %% 6 != 1] <- NA
+```
+
+## Temperature
+
+### Landscape
+
+```{r}
+pTemp <- ggplot(data = db, aes(x=Time, y=temperature, color=NightDay)) + 
+  geom_line() + 
+  geom_text(aes(y=temperature,label=templab),vjust=-1) +
+  scale_x_datetime(labels = date_format("%a %H", tz=tz), breaks="6 hours") +
+  xlab("Time") + 
+  theme(axis.text.x=element_text(angle=45,hjust=1)) +
+  theme(legend.position="none") +
+  scale_colour_gradient(low="black",high="orange") +
+  geom_hline(yintercept = 32, color ="darkblue", lty=2) +
+  ggtitle(paste0("Temperature ",st0)) +
+  ylim(min(db$temperature),max(db$temperature)+4)
+
+pTemp
+```
+
+### Portrait
+
+```{r}
+vTemp <- ggplot(data = db, aes(y=Time, x=temperature, color=NightDay)) + 
+  geom_path() + 
+  geom_text(aes(x=temperature,label=templab),vjust=-1) +
+  scale_y_datetime(labels = date_format("%a %H", tz=tz), breaks="6 hours") +
+  ylab("Time") + 
+  theme(legend.position="none") +
+  scale_colour_gradient(low="black",high="orange") +
+  geom_vline(xintercept = 32, color ="darkblue", lty=2) +
+  ggtitle(paste0("Temperature ",st0)) +
+  xlim(min(db$temperature),max(db$temperature)+2) +
+  coord_y_datetime(ylim = c(max(db$Time), min(db$Time))) +
+  scale_x_continuous(breaks= pretty_breaks())
+
+vTemp
+```
+
+
+## Wind speed
+
+```{r}
+pWind <- ggplot(data = db, aes(x=Time, y=`wind speed`, color=NightDay)) + 
+  geom_line() + 
+  geom_text(aes(y=`wind speed`,label=windlab),vjust=-1) +
+  scale_x_datetime(labels = date_format("%a %H", tz=tz), breaks="6 hours") +
+  xlab("Time") + 
+  theme(axis.text.x=element_text(angle=45,hjust=1)) +
+  theme(legend.position="none") +
+  scale_colour_gradient(low="black",high="orange") +
+  ggtitle(paste0("Wind Speed ",st0)) +
+  ylim(min(db$`wind speed`),max(db$`wind speed`)+1)
+
+pWind
+```
+
+## Grid forecast
+
+```{r}
+get_grid_forecast <- function(weather_list) {
+  sv <- GET(weather_list$properties$forecastGridData)
+  forecast <- fromJSON(content(sv, as="text", encoding = "UTF-8"))
+  forecast$properties$city <- weather_list$properties$relativeLocation$properties$city
+   forecast$properties$state <- weather_list$properties$relativeLocation$properties$state
+    forecast$properties$coordinates <- weather_list$properties$relativeLocation$geometry$coordinates
+    class(forecast) <- "hourly_forecast"
+    return(forecast)
+}
+
+grid_forecast <- get_grid_forecast(weather_list)
+
+db.orig <- db
+```
+
+## Barometric Pressure
+
+```{r}
+db <- grid_forecast$properties$pressure[[1]]
+db$lab <- as.character(db$value)
+db$lab[1:length(db$value) %% 6 != 1] <- NA
+db <- dplyr::rename(db, Time=validTime, pressure=value)
+db$Time <- as.POSIXct(db$Time, format="%FT%T",tz=tz)
+```
+
+```{r}
+pPressure <- ggplot(data = db, aes(x=Time, y=pressure)) + 
+  geom_line() + 
+  geom_text(aes(y=pressure,label=lab),vjust=-1) +
+  scale_x_datetime(labels = date_format("%a %H", tz=tz), breaks="6 hours") +
+  xlab("Time") + 
+  theme(axis.text.x=element_text(angle=45,hjust=1)) +
+  theme(legend.position="none") +
+  scale_colour_gradient(low="black",high="orange") +
+  ggtitle(paste0("Barometric Pressure ",st0)) +
+  ylim(min(db$pressure),max(db$pressure)+0.05)
+
+pPressure
+```
+
+## Sky cover
+
+```{r}
+db <- grid_forecast$properties$skyCover$values
+db$lab <- as.character(db$value)
+db$lab[1:length(db$value) %% 6 != 1] <- NA
+db <- rename(db, Time=validTime, `sky cover`=value)
+db$Time <- as.POSIXct(db$Time, format="%FT%T",tz=tz)
+```
+
+### Landscape
+
+```{r}
+pSkyCover <- ggplot(data = db, aes(x=Time, y=`sky cover`)) + 
+  geom_line() + 
+  geom_text(aes(y=`sky cover`,label=lab),vjust=-1) +
+  scale_x_datetime(labels = date_format("%a %H", tz=tz), breaks="6 hours") +
+  xlab("Time") + 
+  theme(axis.text.x=element_text(angle=45,hjust=1)) +
+  theme(legend.position="none") +
+  scale_colour_gradient(low="black",high="orange") +
+  ggtitle(paste0("Sky Cover ",st0)) +
+  ylim(min(db$`sky cover`),max(db$`sky cover`)+3)
+
+pSkyCover
+```
+
+### Tiled heatmap
+
+```{r, fig.width=4}
+tmp <- db
+tmp$y <- "Sky Cover"
+hr <- as.period(ms("60:00"),"hours")
+tmp$hj <- rep(c(0.8,0,-0.8), length.out=nrow(db))
+
+hSkyCover <- ggplot(data=tmp, aes(x=y,y=Time,fill=`sky cover`)) + 
+  geom_tile(height=3600*6) +
+  geom_text_repel(aes(label=lab), size=3, point.size=NA, direction="x", min.segment.length = 10, na.rm=TRUE) +
+scale_y_datetime(labels = date_format("%a %H", tz=tz), breaks="6 hours") +
+coord_y_datetime(ylim = c(max(tmp$Time), min(tmp$Time))) +
+scale_fill_gradient2(low="white", high="darkgray", limits= c(0,100)) +
+  theme_minimal() +
+  theme(axis.ticks.x=element_blank(),
+        axis.title.x = element_blank(),
+        axis.line.y = element_blank(),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())
+
+hSkyCover
+```
+
+
+## Probability of precipitation
+
+```{r}
+db <- grid_forecast$properties$probabilityOfPrecipitation$values
+db$lab <- as.character(db$value)
+db$lab[1:length(db$value) %% 4 != 1] <- NA
+db <- rename(db, Time=validTime, `precipitation probability`=value)
+db$Time <- as.POSIXct(db$Time, format="%FT%T",tz=tz)
+```
+
+### Landscape
+
+```{r}
+pPrecpProb <- ggplot(data = db, aes(x=Time, y=`precipitation probability`)) + 
+  geom_line() + 
+  geom_text(aes(y=`precipitation probability`,label=lab),vjust=-1) +
+  scale_x_datetime(labels = date_format("%a %H", tz=tz), breaks="6 hours") +
+  xlab("Time") + 
+  theme(axis.text.x=element_text(angle=45,hjust=1)) +
+  theme(legend.position="none") +
+  scale_colour_gradient(low="black",high="orange") +
+  ggtitle(paste0("Precipitation Prob. ",st0)) +
+  ylim(min(db$`precipitation probability`),max(db$`precipitation probability`)+3)
+
+pPrecpProb
+```
+
+```{r}
+coord_y_datetime <- function(xlim = NULL, ylim = NULL, expand = TRUE) {
+  if (!is.null(ylim)) {
+    ylim <- lubridate::as_datetime(ylim)
+  }
+  ggplot2::coord_cartesian(xlim = xlim, ylim = ylim, expand = expand)
+}
+```
+
+### Portrait
+
+
+```{r}
+vPrecpProb <- ggplot(data = db, aes(y=Time, x=`precipitation probability`)) + 
+  geom_path() + 
+  geom_text(aes(x=`precipitation probability`,label=lab),vjust=-1) +
+  scale_y_datetime(labels = date_format("%a %H", tz=tz), breaks="6 hours") +
+  ylab("Time") + 
+  theme(legend.position="none") +
+  scale_colour_gradient(low="black",high="orange") +
+  ggtitle(paste0("Precipitation Prob. ",st0)) +
+  xlim(min(db$`precipitation probability`),max(db$`precipitation probability`)+3) +
+  coord_y_datetime(ylim = c(max(db$Time), min(db$Time))) +
+  scale_x_continuous(breaks= pretty_breaks())
+
+vPrecpProb
+```
+
+### Tiled heatmap
+
+```{r, fig.width=4, warning=FALSE, message=FALSE}
+tmp <- db
+tmp$y <- "Precip. Prob."
+hr <- as.period(ms("60:00"),"hours")
+tmp$hj <- rep(c(0.8,0,-0.8), length.out=nrow(db))
+
+hPrecipProb <- ggplot(data=tmp, aes(x=y,y=Time,fill=`precipitation probability`)) + 
+  geom_tile(height=3600*6) +
+  geom_text_repel(aes(label=`precipitation probability`), size=3, point.size=NA, direction="x", min.segment.length = 10, na.rm = TRUE, verbose = FALSE) +
+scale_y_datetime(labels = date_format("%a %H", tz=tz), breaks="6 hours") +
+coord_y_datetime(ylim = c(max(tmp$Time), min(tmp$Time))) +
+scale_fill_gradient2(low="gray", high="blue", limits= c(0,100)) +
+  theme_minimal() +
+  theme(axis.ticks.x=element_blank(),
+        axis.title.x = element_blank(),
+        axis.line.y = element_blank(),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())
+
+hPrecipProb
+```
+
+
+# Weather
+
+## Forecast
+
+```{r, echo=FALSE, comment=""}
+forecast
+```
+
+## Temperature
+
+```{r, echo=FALSE, warning=FALSE}
+pTemp
+```
+
+## Wind Speed
+
+```{r, echo=FALSE, warning=FALSE}
+pWind
+```
+
+## Barometric Pressure
+
+```{r, echo=FALSE, warning=FALSE}
+pPressure
+```
+
+## Sky Cover
+
+```{r, echo=FALSE, warning=FALSE}
+pSkyCover
+hSkyCover
+```
+
+## Precipitation Probability
+
+```{r, echo=FALSE, warning=FALSE}
+pPrecpProb
+hPrecipProb
+```
+
+## Combined plots
+
+```{r, echo=FALSE, warning=FALSE}
+pTemp / pPrecpProb 
+pSkyCover / pPressure 
+pWind 
+vTemp 
+hPrecipProb | hSkyCover 
+```
+
+
+# Session Information
+
+```{r}
+sessionInfo()
+```
+

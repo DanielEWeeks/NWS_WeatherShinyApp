@@ -1,3 +1,6 @@
+*.Rproj
+rsconnect/*
+
 # History files
 .Rhistory
 .Rapp.history
