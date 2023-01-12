@@ -1,7 +1,7 @@
 library(shiny)
 library(leaflet)
 library(geoloc)
-library(lutz)
+# library(lutz)
 library(patchwork)
 library(sf)
 library(jsonlite)
@@ -178,7 +178,7 @@ mapServer <- function(id){
         db <- hourly_forecast$properties$periods
         db$Time <- as.POSIXct(db$startTime, format="%FT%T")
         
-        tz <- tz_lookup_coords(lat = lat, lon = lon, method = "accurate")
+        tz <- weather_list$properties$timeZone
         
         db$NightDay <- as.numeric(db$isDaytime)
         
@@ -198,7 +198,7 @@ mapServer <- function(id){
           geom_text(aes(y=temperature,label=templab),vjust=-1, size=6) +
           geom_text(aes(y=max(temperature)+30, label=shortLab), color="darkblue", angle=80, size=5) +
           scale_x_datetime(labels = date_format("%a %H", tz=tz), breaks="6 hours") +
-          xlab("Time") + 
+          xlab(paste0("Time (",tz,")")) + 
           theme(axis.text.x=element_text(angle=45,hjust=1), text = element_text(size = 20)) +
           theme(legend.position="none") +
           scale_colour_gradient(low="black",high="orange") +
@@ -228,7 +228,7 @@ mapServer <- function(id){
         lat <- as.numeric(input$myBtn_lat)
         lon <- as.numeric(input$myBtn_lon)
         
-        tz <- tz_lookup_coords(lat = lat, lon = lon, method = "accurate")
+        tz <- weather_list$properties$timeZone
         
         weather_list <- get_NWS_data(lat,lon)
         grid_forecast <- get_grid_forecast(weather_list)
@@ -292,7 +292,7 @@ mapServer <- function(id){
         lat <- as.numeric(input$myBtn_lat)
         lon <- as.numeric(input$myBtn_lon)
         
-        tz <- tz_lookup_coords(lat = lat, lon = lon, method = "accurate")
+        tz <- weather_list$properties$timeZone
         
         weather_list <- get_NWS_data(lat, lon)
         grid_forecast <- get_grid_forecast(weather_list)
