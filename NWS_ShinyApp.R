@@ -31,6 +31,7 @@ get_forecast <- function(weather_list) {
   forecast$properties$city <- weather_list$properties$relativeLocation$properties$city
   forecast$properties$state <- weather_list$properties$relativeLocation$properties$state
   forecast$properties$coordinates <- weather_list$properties$relativeLocation$geometry$coordinates
+  forecast$properties$timeZone <- weather_list$properties$timeZone
   class(forecast) <- "weather_forecast"
   return(forecast)
 }
@@ -40,14 +41,15 @@ get_forecast <- function(weather_list) {
 
 print.weather_forecast <- function(forecast, nperiods = NULL) {
   fdb <- forecast$properties$periods
+  tz <- forecast$properties$timeZone
   if (is.null( nperiods)) {
     nperiods <- nrow(fdb)
   }  
   
   start_times <- fdb$startTime
-  start_dates <- as.POSIXct(substr(start_times, 1, 19), format="%FT%T")
+  start_dates <- as.POSIXct(substr(start_times, 1, 19), format="%FT%T", tz = tz)
   end_times <- fdb$endTime
-  end_dates <- as.POSIXct(substr(end_times, 1, 19), format="%FT%T")
+  end_dates <- as.POSIXct(substr(end_times, 1, 19), format="%FT%T", tz = tz)
   
   st0 <- paste0("Forecast for ", forecast$properties$city,", ",
                 forecast$properties$state," (",
@@ -176,9 +178,11 @@ mapServer <- function(id){
         hourly_forecast <- get_hourly_forecast(weather_list)
         
         db <- hourly_forecast$properties$periods
-        db$Time <- as.POSIXct(db$startTime, format="%FT%T")
         
         tz <- weather_list$properties$timeZone
+        
+        db$Time <- as.POSIXct(db$startTime, format="%FT%T", tz = tz)
+        
         
         db$NightDay <- as.numeric(db$isDaytime)
         
@@ -228,9 +232,9 @@ mapServer <- function(id){
         lat <- as.numeric(input$myBtn_lat)
         lon <- as.numeric(input$myBtn_lon)
         
+        weather_list <- get_NWS_data(lat,lon)
         tz <- weather_list$properties$timeZone
         
-        weather_list <- get_NWS_data(lat,lon)
         grid_forecast <- get_grid_forecast(weather_list)
         
         db <- grid_forecast$properties$probabilityOfPrecipitation$values
@@ -292,9 +296,9 @@ mapServer <- function(id){
         lat <- as.numeric(input$myBtn_lat)
         lon <- as.numeric(input$myBtn_lon)
         
-        tz <- weather_list$properties$timeZone
         
         weather_list <- get_NWS_data(lat, lon)
+        tz <- weather_list$properties$timeZone
         grid_forecast <- get_grid_forecast(weather_list)
         
         db <- grid_forecast$properties$pressure[[1]]
