@@ -169,10 +169,10 @@ mapServer <- function(id){
         req(input$myBtn_lon)
         req(input$myBtn_lat)
         
-        lat <- input$myBtn_lat
-        lon <- input$myBtn_lon
+        lat <- as.numeric(input$myBtn_lat)
+        lon <- as.numeric(input$myBtn_lon)
         
-        weather_list <- get_NWS_data(as.numeric(input$myBtn_lat),as.numeric(input$myBtn_lon))
+        weather_list <- get_NWS_data(lat,lon)
         hourly_forecast <- get_hourly_forecast(weather_list)
         
         db <- hourly_forecast$properties$periods
@@ -225,12 +225,12 @@ mapServer <- function(id){
         req(input$myBtn_lon)
         req(input$myBtn_lat)
         
-        lat <- input$myBtn_lat
-        lon <- input$myBtn_lon
+        lat <- as.numeric(input$myBtn_lat)
+        lon <- as.numeric(input$myBtn_lon)
         
         tz <- tz_lookup_coords(lat = lat, lon = lon, method = "accurate")
         
-        weather_list <- get_NWS_data(as.numeric(input$myBtn_lat),as.numeric(input$myBtn_lon))
+        weather_list <- get_NWS_data(lat,lon)
         grid_forecast <- get_grid_forecast(weather_list)
         
         db <- grid_forecast$properties$probabilityOfPrecipitation$values
@@ -289,12 +289,12 @@ mapServer <- function(id){
         req(input$myBtn_lon)
         req(input$myBtn_lat)
         
-        lat <- input$myBtn_lat
-        lon <- input$myBtn_lon
+        lat <- as.numeric(input$myBtn_lat)
+        lon <- as.numeric(input$myBtn_lon)
         
         tz <- tz_lookup_coords(lat = lat, lon = lon, method = "accurate")
         
-        weather_list <- get_NWS_data(as.numeric(input$myBtn_lat),as.numeric(input$myBtn_lon))
+        weather_list <- get_NWS_data(lat, lon)
         grid_forecast <- get_grid_forecast(weather_list)
         
         db <- grid_forecast$properties$pressure[[1]]
