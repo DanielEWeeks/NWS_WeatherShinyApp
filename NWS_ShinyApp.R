@@ -11,6 +11,7 @@ library(dplyr)
 library(ggrepel)
 library(scales)
 library(lubridate)
+library(pander)
 
 # Joe Guiness has a YouTube video that shows how to access the NWS API
 #
@@ -104,6 +105,47 @@ coord_y_datetime <- function(xlim = NULL, ylim = NULL, expand = TRUE) {
   ggplot2::coord_cartesian(xlim = xlim, ylim = ylim, expand = expand)
 }
 
+get_current_conditions <- function(weather_list, nrows=6) {
+  sv <- GET(weather_list$properties$observationStations)
+  stations <- fromJSON(content(sv, as="text", encoding = "UTF-8"))
+  
+  stations_df <- data.frame(ID=stations$features$properties$stationIdentifier,
+                            Name=stations$features$properties$name, URL=stations$features$properties$`@id`)
+  
+  # head(stations_df)
+  stations_df$Conditions <- NA
+  stations_df$Temperature <- NA
+  stations_df$WindChill <- NA
+  stations_df$Wind <- NA
+  stations_df$WindGusts <- NA
+  
+  for (i in 1:nrows) {
+    sv <- GET(paste0(stations_df$URL[i],"/observations/latest"))
+    current <- fromJSON(content(sv, as="text", encoding = "UTF-8"))
+    # current$properties$temperature$value
+    # current$properties$textDescription
+    
+    if (!is.null(current$properties$temperature$value)) {
+      stations_df$Temperature[i] <- round(32 + (9/5)*current$properties$temperature$value,1)
+    }
+    stations_df$Conditions[i] <- current$properties$textDescription
+    if (!is.null(current$properties$windChill$value)) {
+      stations_df$WindChill[i] <- round(32 + (9/5)*current$properties$windChill$value,1)
+    }
+    if (!is.null(current$properties$windSpeed$value)) {
+      stations_df$Wind[i] <- round(current$properties$windSpeed$value/1.609344,1)
+    }
+    if (!is.null(current$properties$windGust$value)) {
+      stations_df$WindGusts[i] <- round(current$properties$windGust$value/1.609344,1)
+    }
+    
+  }
+  
+  # stations_df$Conditions[i] <- current$properties$textDescription
+  
+  return(stations_df[1:nrows,])
+}
+
 
 # R Shiny geoloc geolocation code from 
 # https://stackoverflow.com/questions/71850331/vectors-of-latitude-and-longitude-in-geolocation-app-in-shiny
@@ -117,6 +159,7 @@ mapUI <- function(id, label = "Location in map"){
     textOutput(ns("coords")),
     textOutput(ns("col")),
    # textOutput(ns("md")), # for median latitude
+   verbatimTextOutput(ns("current")),
    plotOutput(ns("TempPlot"), height="auto"),
    plotOutput(ns("PrecipProbPlot"), height="auto"),
    plotOutput(ns("BarometerPlot"), height="auto"),
@@ -130,6 +173,17 @@ mapServer <- function(id){
   moduleServer(
     id,
     function(input, output, session){
+      
+      weather_list_r <- reactive({
+        req(input$myBtn_lon)
+        req(input$myBtn_lat)
+        
+        lat <- as.numeric(input$myBtn_lat)
+        lon <- as.numeric(input$myBtn_lon)
+        
+        weather_list <- get_NWS_data(lat, lon)
+      })
+      
       output$coords <- renderText(paste(input$myBtn_lat, input$myBtn_lon, sep = ", "))
       
       Lats <- reactiveValues(Lat = NULL)
@@ -160,10 +214,20 @@ mapServer <- function(id){
           addMarkers(as.numeric(input$myBtn_lon), as.numeric(input$myBtn_lat), label = "You're here!")
       })
       
+      output$current <- renderPrint({
+        req(input$myBtn_lon)
+        req(input$myBtn_lat)
+        weather_list <- weather_list_r()
+        current_conditions <- get_current_conditions(weather_list)
+        pander(current_conditions[,c("Name","Conditions" , "Temperature",
+"WindChill" ,  "Wind", "WindGusts")], split.table=100)
+      })
+      
       output$forecast <- renderPrint({
         req(input$myBtn_lon)
         req(input$myBtn_lat)
-        weather_list <- get_NWS_data(as.numeric(input$myBtn_lat),as.numeric(input$myBtn_lon))
+        # weather_list <- get_NWS_data(as.numeric(input$myBtn_lat),as.numeric(input$myBtn_lon))
+        weather_list <- weather_list_r()
         forecast <- get_forecast(weather_list)
         print.weather_forecast(forecast)
       })
@@ -175,7 +239,8 @@ mapServer <- function(id){
         lat <- as.numeric(input$myBtn_lat)
         lon <- as.numeric(input$myBtn_lon)
         
-        weather_list <- get_NWS_data(lat,lon)
+        # weather_list <- get_NWS_data(lat,lon)
+        weather_list <- weather_list_r()
         hourly_forecast <- get_hourly_forecast(weather_list)
         
         db <- hourly_forecast$properties$periods
@@ -233,7 +298,8 @@ mapServer <- function(id){
         lat <- as.numeric(input$myBtn_lat)
         lon <- as.numeric(input$myBtn_lon)
         
-        weather_list <- get_NWS_data(lat,lon)
+        # weather_list <- get_NWS_data(lat,lon)
+        weather_list <- weather_list_r()
         tz <- weather_list$properties$timeZone
         
         grid_forecast <- get_grid_forecast(weather_list)
@@ -298,7 +364,8 @@ mapServer <- function(id){
         lon <- as.numeric(input$myBtn_lon)
         
         
-        weather_list <- get_NWS_data(lat, lon)
+        # weather_list <- get_NWS_data(lat, lon)
+        weather_list <- weather_list_r()
         tz <- weather_list$properties$timeZone
         grid_forecast <- get_grid_forecast(weather_list)
         
@@ -330,24 +397,26 @@ mapServer <- function(id){
         lat <- as.numeric(input$myBtn_lat)
         lon <- as.numeric(input$myBtn_lon)
         
-        weather_list <- get_NWS_data(lat, lon)
+        # weather_list <- get_NWS_data(lat, lon)
+        weather_list <- weather_list_r()
         html.str <- paste0("https://forecast.weather.gov/meteograms/Plotter.php?lat=", round(lat,4),"&lon=",round(lon,4),"&wfo=PBZ&zcode=", basename(weather_list$properties$forecastZone),"&gset=20&gdiff=10&unit=0&tinfo=EY5&ahour=0&pcmd=11101111110000000000000000000000000000000000000000000000000&lg=en&indu=1!1!1!&dd=&bw=&hrspan=48&pqpfhr=6&psnwhr=6")
         tags$div(
           tags$img(src=html.str, width="80%"),
+          # tags$p(),
+          # tags$hr(),
+          # tags$img(src="https://origin.wpc.ncep.noaa.gov/basicwx/allfcsts_loop_ndfd.gif", width="80%"),
+          # tags$hr(),
+          # tags$p("12 hour forecast"),
+          # tags$img(src='https://www.wpc.ncep.noaa.gov/basicwx/92fndfd.gif', width="80%"),
+          # tags$p("24 hour forecast"),
+          # tags$img(src='https://www.wpc.ncep.noaa.gov/basicwx/94fndfd.gif', width="80%"),
+          # tags$p("36 hour forecast"),
+          # tags$img(src='https://www.wpc.ncep.noaa.gov/basicwx/96fndfd.gif', width="80%"),
+          # tags$p("48 hour forecast"),
+          # tags$img(src='https://www.wpc.ncep.noaa.gov/basicwx/98fndfd.gif', width="80%"),
           tags$p(),
           tags$hr(),
-          tags$img(src="https://origin.wpc.ncep.noaa.gov/basicwx/allfcsts_loop_ndfd.gif", width="80%"),
-          tags$hr(),
-          tags$p("12 hour forecast"),
-          tags$img(src='https://www.wpc.ncep.noaa.gov/basicwx/92fndfd.gif', width="80%"),
-          tags$p("24 hour forecast"),
-          tags$img(src='https://www.wpc.ncep.noaa.gov/basicwx/94fndfd.gif', width="80%"),
-          tags$p("36 hour forecast"),
-          tags$img(src='https://www.wpc.ncep.noaa.gov/basicwx/96fndfd.gif', width="80%"),
-          tags$p("48 hour forecast"),
-          tags$img(src='https://www.wpc.ncep.noaa.gov/basicwx/98fndfd.gif', width="80%"),
-          tags$p(),
-          tags$hr()
+          style="text-align: center;"
           )
       })
     }

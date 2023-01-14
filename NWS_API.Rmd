@@ -235,6 +235,58 @@ db %>% select(Time, shortLab) %>% filter(!is.na(shortLab))
 
 ```
 
+## Current conditions
+
+/stations/{stationId}/observations/latest
+
+```{r}
+get_current_conditions <- function(weather_list, nrows=6) {
+  sv <- GET(weather_list$properties$observationStations)
+  stations <- fromJSON(content(sv, as="text", encoding = "UTF-8"))
+  
+  stations_df <- data.frame(ID=stations$features$properties$stationIdentifier,
+                            Name=stations$features$properties$name, URL=stations$features$properties$`@id`)
+  
+  # head(stations_df)
+  stations_df$Conditions <- NA
+  stations_df$Temperature <- NA
+  stations_df$WindChill <- NA
+  stations_df$Wind <- NA
+  stations_df$WindGusts <- NA
+  
+  for (i in 1:nrows) {
+    sv <- GET(paste0(stations_df$URL[i],"/observations/latest"))
+    current <- fromJSON(content(sv, as="text", encoding = "UTF-8"))
+    # current$properties$temperature$value
+    # current$properties$textDescription
+    
+    if (!is.null(current$properties$temperature$value)) {
+      stations_df$Temperature[i] <- round(32 + (9/5)*current$properties$temperature$value,1)
+    }
+    stations_df$Conditions[i] <- current$properties$textDescription
+    if (!is.null(current$properties$windChill$value)) {
+      stations_df$WindChill[i] <- round(32 + (9/5)*current$properties$windChill$value,1)
+    }
+    if (!is.null(current$properties$windSpeed$value)) {
+      stations_df$Wind[i] <- current$properties$windSpeed$value/1.609344
+    }
+    if (!is.null(current$properties$windGust$value)) {
+      stations_df$WindGusts[i] <- current$properties$windGust$value/1.609344
+    }
+    
+  }
+  
+ # stations_df$Conditions[i] <- current$properties$textDescription
+  
+  return(stations_df[1:nrows,])
+}
+
+current_conditions <- get_current_conditions(weather_list)
+
+current_conditions %>% select(Name, Conditions, Temperature, WindChill, Wind, WindGusts) %>% pander()
+```
+
+
 ## NWS plot
 
 ```
