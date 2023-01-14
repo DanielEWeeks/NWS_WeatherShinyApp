@@ -121,6 +121,7 @@ mapUI <- function(id, label = "Location in map"){
    plotOutput(ns("PrecipProbPlot"), height="auto"),
    plotOutput(ns("BarometerPlot"), height="auto"),
    verbatimTextOutput(ns("forecast")),
+   htmlOutput(ns("NWSPlot")),
    leafletOutput(ns("lf"))
   )
 }
@@ -320,6 +321,34 @@ mapServer <- function(id){
         
         print(pPressure)
         
+      })
+      
+      output$NWSPlot <- renderUI({
+        req(input$myBtn_lon)
+        req(input$myBtn_lat)
+        
+        lat <- as.numeric(input$myBtn_lat)
+        lon <- as.numeric(input$myBtn_lon)
+        
+        weather_list <- get_NWS_data(lat, lon)
+        html.str <- paste0("https://forecast.weather.gov/meteograms/Plotter.php?lat=", round(lat,4),"&lon=",round(lon,4),"&wfo=PBZ&zcode=", basename(weather_list$properties$forecastZone),"&gset=20&gdiff=10&unit=0&tinfo=EY5&ahour=0&pcmd=11101111110000000000000000000000000000000000000000000000000&lg=en&indu=1!1!1!&dd=&bw=&hrspan=48&pqpfhr=6&psnwhr=6")
+        tags$div(
+          tags$img(src=html.str, width="80%"),
+          tags$p(),
+          tags$hr(),
+          tags$img(src="https://origin.wpc.ncep.noaa.gov/basicwx/allfcsts_loop_ndfd.gif", width="80%"),
+          tags$hr(),
+          tags$p("12 hour forecast"),
+          tags$img(src='https://www.wpc.ncep.noaa.gov/basicwx/92fndfd.gif', width="80%"),
+          tags$p("24 hour forecast"),
+          tags$img(src='https://www.wpc.ncep.noaa.gov/basicwx/94fndfd.gif', width="80%"),
+          tags$p("36 hour forecast"),
+          tags$img(src='https://www.wpc.ncep.noaa.gov/basicwx/96fndfd.gif', width="80%"),
+          tags$p("48 hour forecast"),
+          tags$img(src='https://www.wpc.ncep.noaa.gov/basicwx/98fndfd.gif', width="80%"),
+          tags$p(),
+          tags$hr()
+          )
       })
     }
   )
