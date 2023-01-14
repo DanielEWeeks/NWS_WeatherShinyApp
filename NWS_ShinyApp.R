@@ -355,9 +355,17 @@ mapServer <- function(id){
 }
 
 ui <- fluidPage(
+  tabsetPanel(
+    tabPanel("Forecast",
   h2("National Weather Service forecast"),
   tags$p("Click the button to get the forecast for your location"),
   mapUI("map1")
+    ),
+  tabPanel("Maps",
+           includeHTML("Maps.html")),
+  tabPanel("BirdCast",
+           includeHTML("BirdCast.html"))
+  )
 )
 
 server <- function(input, output, session) {
