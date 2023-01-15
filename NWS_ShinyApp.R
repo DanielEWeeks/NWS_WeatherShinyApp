@@ -13,6 +13,10 @@ library(scales)
 library(lubridate)
 library(pander)
 
+# Read in the places table containing data on their latitude and longitude
+places <- read.table("places.txt",header=TRUE)
+
+
 # Joe Guiness has a YouTube video that shows how to access the NWS API
 #
 # https://youtu.be/hxl1c8WRNiA
@@ -155,9 +159,13 @@ mapUI <- function(id, label = "Location in map"){
   
   tagList(
     geoloc::button_geoloc(ns("myBtn"), "Get my Location"),
+    selectInput(ns("row"), "Select location:",
+                c("Home"=1,"Cabin"=2,"Cape May"=3,"Oradell"=4,"South Hadley"=5,"Reading"=6),
+                width="10%"),
     tags$br(),
-    textOutput(ns("coords")),
-    textOutput(ns("col")),
+  # textOutput(ns("coords")),
+  # textOutput(ns("col")),
+    textOutput(ns("lat_lon_joint")),
    # textOutput(ns("md")), # for median latitude
    verbatimTextOutput(ns("current")),
    plotOutput(ns("TempPlot"), height="auto"),
@@ -165,7 +173,7 @@ mapUI <- function(id, label = "Location in map"){
    plotOutput(ns("BarometerPlot"), height="auto"),
    verbatimTextOutput(ns("forecast")),
    htmlOutput(ns("NWSPlot")),
-   leafletOutput(ns("lf"))
+   leafletOutput(ns("lf2"))
   )
 }
 
@@ -174,14 +182,25 @@ mapServer <- function(id){
     id,
     function(input, output, session){
       
+      mydata <- reactive({places})
+      lat <- reactiveVal()
+      lon <- reactiveVal()
+      lat_lon <- reactiveVal(value = c("lat"=0,"lon"=0))
+      
       weather_list_r <- reactive({
-        req(input$myBtn_lon)
-        req(input$myBtn_lat)
+  #      req(input$myBtn_lon)
+  #      req(input$myBtn_lat)
         
-        lat <- as.numeric(input$myBtn_lat)
-        lon <- as.numeric(input$myBtn_lon)
+  #      lat <- as.numeric(input$myBtn_lat)
+  #      lon <- as.numeric(input$myBtn_lon)
+  
+        req(lat_lon())
+        Lon <- lat_lon()["lon"]
+        names(Lon) <- NULL
+        Lat <- lat_lon()["lat"] 
+        names(Lat) <- NULL
         
-        weather_list <- get_NWS_data(lat, lon)
+        weather_list <- get_NWS_data(Lat, Lon)
       })
       
       output$coords <- renderText(paste(input$myBtn_lat, input$myBtn_lon, sep = ", "))
@@ -204,6 +223,57 @@ mapServer <- function(id){
           paste0("Median latitude is: ", median(Lats$Lat))
         } 
       })
+      
+      observeEvent(input$myBtn_lon, {
+        lat <- as.numeric(input$myBtn_lat)
+        lon <- as.numeric(input$myBtn_lon)
+        
+        lat_lon <- c("lat"=lat,"lon"=lon)
+        lat_lon(c("lat"=lat,"lon"=lon))
+        lat(as.numeric(input$myBtn_lat))
+        lon(as.numeric(input$myBtn_lon))
+        output$lat_lon <- renderText({
+          paste0("observeEvent myBtn_lon: ",lat(),", ",lon())
+        })
+      })
+      
+      observeEvent(input$row, {
+        lon <- mydata()$Lon[as.numeric(input$row)]
+        lat <- mydata()$Lat[as.numeric(input$row)]
+        
+        lat_lon <- c("lat"=lat,"lon"=lon)
+        lat_lon(c("lat"=lat,"lon"=lon))
+        lon(mydata()$Lon[as.numeric(input$row)])
+        lat(mydata()$Lat[as.numeric(input$row)])
+        output$lat_lon <- renderText({
+          paste0("observeEvent row: ",lat(),", ",lon())
+        })
+      })
+      
+      observeEvent(c(input$myBtn_lon, input$row), {
+        # req(lat_lon)
+        Lon <- lat_lon()["lon"]
+        Lat <- lat_lon()["lat"]
+        lat(lat_lon()["lat"])
+        lon(lat_lon()["lon"])
+        # lat_lon(c("lat"=Lat,"lon"=Lon))
+        output$lat_lon_joint <- renderText({
+          paste0(lat(),", ",lon())
+        })
+      })
+      
+      output$lf2 <- renderLeaflet({
+        req(lat_lon())
+        Lon <- lat_lon()["lon"]
+        names(Lon) <- NULL
+        Lat <- lat_lon()["lat"] 
+        names(Lat) <- NULL
+        leaflet() %>%
+          addTiles() %>%
+          setView(Lon, Lat, zoom = 17) %>%
+          addMarkers(Lon, Lat, label = "You're here!")
+      })
+      
       
       output$lf <- renderLeaflet({
         req(input$myBtn_lon)
@@ -264,7 +334,7 @@ mapServer <- function(id){
         db$shortLab[1:length(db$shortLab) %% 8 != 1] <- NA
         
         pTemp <- ggplot(data = db, aes(x=Time, y=temperature, color=NightDay)) + 
-          geom_line(lwd=1.2) + 
+          geom_line(linewidth=1.2) + 
           geom_text(aes(y=temperature,label=templab),vjust=-1, size=6) +
           geom_text(aes(y=max(temperature)+30, label=shortLab), color="darkblue", angle=80, size=5) +
           scale_x_datetime(labels = date_format("%a %H", tz=tz), breaks="6 hours") +
@@ -277,7 +347,7 @@ mapServer <- function(id){
           ylim(min(db$temperature),max(db$temperature)+45)
         
         pWind <- ggplot(data = db, aes(x=Time, y=`wind speed`, color=NightDay)) + 
-          geom_line(lwd=1.2) + 
+          geom_line(linewidth=1.2) + 
           geom_text(aes(y=`wind speed`,label=windlab),vjust=-1, size=6) +
           scale_x_datetime(labels = date_format("%a %H", tz=tz), breaks="6 hours") +
           xlab("Time") + 
@@ -369,6 +439,7 @@ mapServer <- function(id){
         tz <- weather_list$properties$timeZone
         grid_forecast <- get_grid_forecast(weather_list)
         
+        if (length(grid_forecast$properties$pressure$values)>0) {
         db <- grid_forecast$properties$pressure[[1]]
         db$lab <- as.character(db$value)
         db$lab[1:length(db$value) %% 6 != 1] <- NA
@@ -376,7 +447,7 @@ mapServer <- function(id){
         db$Time <- as.POSIXct(db$Time, format="%FT%T",tz=tz)
         
         pPressure <- ggplot(data = db, aes(x=Time, y=pressure)) + 
-          geom_line(lwd=1.2) + 
+          geom_line(linewidth=1.2) + 
           geom_text(aes(y=pressure,label=lab),vjust=-1, size=6) +
           scale_x_datetime(labels = date_format("%a %H", tz=tz), breaks="6 hours") +
           xlab("Time") + 
@@ -385,6 +456,16 @@ mapServer <- function(id){
           scale_colour_gradient(low="black",high="orange") +
           ggtitle("Barometric Pressure") +
           ylim(min(db$pressure),max(db$pressure)+0.05)
+        
+  
+        } else {
+          
+          pPressure <- ggplot() +
+            annotate("text", x = 2,  y = 2,
+                     size = 6,
+                     label = "No barometric pressure data available") + theme_void()
+          
+        }
         
         print(pPressure)
         
