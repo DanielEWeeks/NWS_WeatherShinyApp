@@ -480,7 +480,7 @@ mapServer <- function(id){
         
         # weather_list <- get_NWS_data(lat, lon)
         weather_list <- weather_list_r()
-        html.str <- paste0("https://forecast.weather.gov/meteograms/Plotter.php?lat=", round(lat,4),"&lon=",round(lon,4),"&wfo=PBZ&zcode=", basename(weather_list$properties$forecastZone),"&gset=20&gdiff=10&unit=0&tinfo=EY5&ahour=0&pcmd=11101111110000000000000000000000000000000000000000000000000&lg=en&indu=1!1!1!&dd=&bw=&hrspan=48&pqpfhr=6&psnwhr=6")
+        html.str <- paste0("https://forecast.weather.gov/meteograms/Plotter.php?lat=", round(lat(),4),"&lon=",round(lon(),4),"&wfo=PBZ&zcode=", basename(weather_list$properties$forecastZone),"&gset=20&gdiff=10&unit=0&tinfo=EY5&ahour=0&pcmd=11101111110000000000000000000000000000000000000000000000000&lg=en&indu=1!1!1!&dd=&bw=&hrspan=48&pqpfhr=6&psnwhr=6")
         tags$div(
           tags$img(src=html.str, width="80%"),
           # tags$p(),
