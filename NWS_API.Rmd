@@ -300,6 +300,7 @@ current_conditions %>% select(Name, Conditions, Temperature, WindChill, Wind, Wi
 ```
 
 ```{r}
+weather_list$properties$forecastOffice
 weather_list$properties$forecastZone
 weather_list$properties$relativeLocation$geometry$coordinates
 
