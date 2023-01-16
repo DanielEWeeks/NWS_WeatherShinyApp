@@ -12,6 +12,7 @@ library(ggrepel)
 library(scales)
 library(lubridate)
 library(pander)
+library(shinyWidgets)
 
 # Read in the places table containing data on their latitude and longitude
 places <- read.table("places.txt",header=TRUE)
@@ -161,13 +162,13 @@ mapUI <- function(id, label = "Location in map"){
     geoloc::button_geoloc(ns("myBtn"), "Get my Location"),
     selectInput(ns("row"), "Select location:",
                 c("Home"=1,"Cabin"=2,"Cape May"=3,"Oradell"=4,"South Hadley"=5,"Reading"=6),
-                width="10%"),
-    tags$br(),
+                width="10%", selectize = FALSE),
+    tags$hr(),
   # textOutput(ns("coords")),
   # textOutput(ns("col")),
-    textOutput(ns("lat_lon_joint")),
+    textOutput(ns("lat_lon")),
    # textOutput(ns("md")), # for median latitude
-   verbatimTextOutput(ns("current")),
+   addSpinner(verbatimTextOutput(ns("current")), spin="circle"),
    plotOutput(ns("TempPlot"), height="auto"),
    plotOutput(ns("PrecipProbPlot"), height="auto"),
    plotOutput(ns("BarometerPlot"), height="auto"),
@@ -233,20 +234,21 @@ mapServer <- function(id){
         lat(as.numeric(input$myBtn_lat))
         lon(as.numeric(input$myBtn_lon))
         output$lat_lon <- renderText({
-          paste0("observeEvent myBtn_lon: ",lat(),", ",lon())
+          paste0("Current location: ",lat(),", ",lon())
         })
       })
       
       observeEvent(input$row, {
         lon <- mydata()$Lon[as.numeric(input$row)]
         lat <- mydata()$Lat[as.numeric(input$row)]
+        place <- mydata()$Place[as.numeric(input$row)]
         
         lat_lon <- c("lat"=lat,"lon"=lon)
         lat_lon(c("lat"=lat,"lon"=lon))
         lon(mydata()$Lon[as.numeric(input$row)])
         lat(mydata()$Lat[as.numeric(input$row)])
         output$lat_lon <- renderText({
-          paste0("observeEvent row: ",lat(),", ",lon())
+          paste0(gsub("_"," ",place),": ",lat(),", ",lon())
         })
       })
       
@@ -285,8 +287,7 @@ mapServer <- function(id){
       })
       
       output$current <- renderPrint({
-        req(input$myBtn_lon)
-        req(input$myBtn_lat)
+        req(lat_lon())
         weather_list <- weather_list_r()
         current_conditions <- get_current_conditions(weather_list)
         pander(current_conditions[,c("Name","Conditions" , "Temperature",
@@ -294,22 +295,16 @@ mapServer <- function(id){
       })
       
       output$forecast <- renderPrint({
-        req(input$myBtn_lon)
-        req(input$myBtn_lat)
-        # weather_list <- get_NWS_data(as.numeric(input$myBtn_lat),as.numeric(input$myBtn_lon))
+        req(lat_lon())
+
         weather_list <- weather_list_r()
         forecast <- get_forecast(weather_list)
         print.weather_forecast(forecast)
       })
       
       output$TempPlot <- renderPlot(height=800,units="px",{ 
-        req(input$myBtn_lon)
-        req(input$myBtn_lat)
+        req(lat_lon())
         
-        lat <- as.numeric(input$myBtn_lat)
-        lon <- as.numeric(input$myBtn_lon)
-        
-        # weather_list <- get_NWS_data(lat,lon)
         weather_list <- weather_list_r()
         hourly_forecast <- get_hourly_forecast(weather_list)
         
@@ -362,13 +357,8 @@ mapServer <- function(id){
         })
       
       output$PrecipProbPlot <- renderPlot(height=600,units="px",{ 
-        req(input$myBtn_lon)
-        req(input$myBtn_lat)
+        req(lat_lon())
         
-        lat <- as.numeric(input$myBtn_lat)
-        lon <- as.numeric(input$myBtn_lon)
-        
-        # weather_list <- get_NWS_data(lat,lon)
         weather_list <- weather_list_r()
         tz <- weather_list$properties$timeZone
         
@@ -427,14 +417,8 @@ mapServer <- function(id){
       })
       
       output$BarometerPlot <- renderPlot(height=400,units="px",{ 
-        req(input$myBtn_lon)
-        req(input$myBtn_lat)
-        
-        lat <- as.numeric(input$myBtn_lat)
-        lon <- as.numeric(input$myBtn_lon)
-        
-        
-        # weather_list <- get_NWS_data(lat, lon)
+        req(lat_lon())
+  
         weather_list <- weather_list_r()
         tz <- weather_list$properties$timeZone
         grid_forecast <- get_grid_forecast(weather_list)
@@ -472,11 +456,7 @@ mapServer <- function(id){
       })
       
       output$NWSPlot <- renderUI({
-        req(input$myBtn_lon)
-        req(input$myBtn_lat)
-        
-        lat <- as.numeric(input$myBtn_lat)
-        lon <- as.numeric(input$myBtn_lon)
+        req(lat_lon())        
   
         # Oradell graph:
         # https://forecast.weather.gov/meteograms/Plotter.php?lat=40.955&lon=-74.031&wfo=OKX&zcode=NJZ104&gset=20&gdiff=10&unit=0&tinfo=EY5&ahour=0&pcmd=11011111111110000000000000000000000000000000000000000000000&lg=en&indu=1!1!1!&dd=&bw=&hrspan=48&pqpfhr=6&psnwhr=6
