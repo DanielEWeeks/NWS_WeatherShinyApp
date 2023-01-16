@@ -86,8 +86,8 @@ This code is based on Joe Guiness' YouTube tutorial:
 
 ```{r}
 # Pittsburgh
-lon <- -79.9959
-lat <- 40.4406
+lon <- -79.915280
+lat <- 40.433810
 
 
 
