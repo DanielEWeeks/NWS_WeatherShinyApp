@@ -13,10 +13,35 @@ library(scales)
 library(lubridate)
 library(pander)
 library(shinyWidgets)
+library(maptools)
 
 # Read in the places table containing data on their latitude and longitude
 places <- read.table("places.txt",header=TRUE)
 
+SunRiseSet <- function(db, tz, lat, lon) {
+  # Change the p.time into the local time zone
+  db$p.time <- with_tz(db$Time,tz=tz)
+  
+  # Sunrise, sunset
+  longlat <- matrix(c(lon, lat), nrow=1)
+  Hels <- SpatialPoints(longlat, proj4string=CRS("+proj=longlat +datum=WGS84"))
+  start.time <- db$p.time[1]
+  time.seq <- seq(from=start.time, length.out=9,by='days')
+  up <- sunriset(Hels,time.seq,direction='sunrise', POSIXct.out=TRUE)
+  down <- sunriset(Hels,time.seq,direction='sunset', POSIXct.out=TRUE)
+  up$time <- with_tz(up$time,tz=tz)
+  down$time <- with_tz(down$time,tz=tz)
+  
+  up.time <- up$time[up$time > db$p.time[1]]
+  down.time <- down$time[down$time > db$p.time[1]]
+  up.time <- up.time[up.time < max(db$p.time)]
+  down.time <- down.time[down.time < max(db$p.time)]
+  
+  up <- data.frame(Date=format(up.time,"%F"),Sunrise=up.time)
+  down <- data.frame(Date=format(down.time,"%F"),Sunset=down.time)
+  SunriseSunset <- full_join(up, down, by="Date")
+  SunriseSunset
+}
 
 # Joe Guiness has a YouTube video that shows how to access the NWS API
 #
@@ -328,6 +353,8 @@ mapServer <- function(id){
         db$shortLab <- db$shortForecast
         db$shortLab[1:length(db$shortLab) %% 8 != 1] <- NA
         
+        SunriseSunset <- SunRiseSet(db=db, tz = tz, lat= lat(), lon=lon())
+        
         pTemp <- ggplot(data = db, aes(x=Time, y=temperature, color=NightDay)) + 
           geom_line(linewidth=1.2) + 
           geom_text(aes(y=temperature,label=templab),vjust=-1, size=6) +
@@ -341,6 +368,10 @@ mapServer <- function(id){
           ggtitle(paste0("Temperature forecast")) +
           ylim(min(db$temperature),max(db$temperature)+45)
         
+        pTemp <- pTemp +  
+          annotate("rect",xmin=SunriseSunset$Sunrise,xmax=SunriseSunset$Sunset,ymin=-Inf,ymax=max(db$temperature)+2,alpha=1/5,fill="sky blue",colour="black")
+        
+        
         pWind <- ggplot(data = db, aes(x=Time, y=`wind speed`, color=NightDay)) + 
           geom_line(linewidth=1.2) + 
           geom_text(aes(y=`wind speed`,label=windlab),vjust=-1, size=6) +
@@ -351,6 +382,9 @@ mapServer <- function(id){
           scale_colour_gradient(low="black",high="orange") +
           ggtitle("Wind Speed forecast") +
           ylim(min(db$`wind speed`),max(db$`wind speed`)+1)
+        
+        pWind <- pWind +  
+          annotate("rect",xmin=SunriseSunset$Sunrise,xmax=SunriseSunset$Sunset,ymin=-Inf,ymax=Inf,alpha=1/5,fill="sky blue",colour="black")
         
         
         print(pTemp / pWind)
