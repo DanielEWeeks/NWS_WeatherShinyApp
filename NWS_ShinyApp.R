@@ -198,6 +198,7 @@ mapUI <- function(id, label = "Location in map"){
    plotOutput(ns("PrecipProbPlot"), height="auto"),
    plotOutput(ns("BarometerPlot"), height="auto"),
    verbatimTextOutput(ns("forecast")),
+   verbatimTextOutput(ns("sunrise")),
    htmlOutput(ns("NWSPlot")),
    leafletOutput(ns("lf2"))
   )
@@ -317,6 +318,16 @@ mapServer <- function(id){
         current_conditions <- get_current_conditions(weather_list)
         pander(current_conditions[,c("Name","Conditions" , "Temperature",
 "WindChill" ,  "Wind", "WindGusts")], split.table=100)
+      })
+      
+      output$sunrise <- renderPrint({
+        req(lat_lon())
+        weather_list <- weather_list_r()
+        tz <- weather_list$properties$timeZone
+        SunriseSunset <- SunRiseSet(db=db, tz = tz, lat= lat(), lon=lon())
+        SunriseSunset$Sunrise <- format(SunriseSunset$Sunrise, "%H:%M:%S")
+        SunriseSunset$Sunset <- format(SunriseSunset$Sunset, "%H:%M:%S")
+        pander(SunriseSunset)
       })
       
       output$forecast <- renderPrint({
