@@ -323,10 +323,16 @@ mapServer <- function(id){
       output$sunrise <- renderPrint({
         req(lat_lon())
         weather_list <- weather_list_r()
+        hourly_forecast <- get_hourly_forecast(weather_list)
+        db <- hourly_forecast$properties$periods
         tz <- weather_list$properties$timeZone
+        db$Time <- as.POSIXct(db$startTime, format="%FT%T", tz = tz)
+        
         SunriseSunset <- SunRiseSet(db=db, tz = tz, lat= lat(), lon=lon())
+        SunriseSunset$Day <- format(SunriseSunset$Sunrise,"%A")
         SunriseSunset$Sunrise <- format(SunriseSunset$Sunrise, "%H:%M:%S")
         SunriseSunset$Sunset <- format(SunriseSunset$Sunset, "%H:%M:%S")
+        SunriseSunset <- SunriseSunset %>% select(Date, Day, Sunrise, Sunset)
         pander(SunriseSunset)
       })
       
