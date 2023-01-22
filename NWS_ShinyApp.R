@@ -514,6 +514,7 @@ mapServer <- function(id){
         db <- rename(db, Time=validTime, `precipitation probability`=value)
         db$Time <- as.POSIXct(db$Time, format="%FT%T",tz=tz)
         
+        hrs <- c(2:13)
         shortTermPrecipProb <- ggplot(data = db[hrs,], aes(x=Time, y=`precipitation probability`)) +
           geom_col(fill="skyblue") +
           geom_text(aes(y=`precipitation probability`,label=`precipitation probability`),vjust=-0.2, size=6) +
