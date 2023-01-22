@@ -500,7 +500,7 @@ mapServer <- function(id){
         print(pTemp / pWind)
         })
       
-      output$ShortTermPrecipProb <- renderPlot(height=600,units="px",{ 
+      output$ShortTermPrecipProb <- renderPlot(height=300,units="px",{ 
         req(lat_lon())
         
         weather_list <- weather_list_r()
@@ -520,7 +520,7 @@ mapServer <- function(id){
           geom_text(aes(y=`precipitation probability`,label=`precipitation probability`),vjust=-0.2, size=6) +
           scale_x_datetime(labels = date_format("%H", tz=tz), breaks="1 hours") + 
           ggtitle("12 hour precipitation forecast") +
-          theme(text = element_text(size = 20))
+          theme(text = element_text(size = 20)) + ylim(c(0,100))
         
         print(shortTermPrecipProb)
       })
