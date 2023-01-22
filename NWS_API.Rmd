@@ -289,7 +289,10 @@ SunRiseSet <- function(db, tz, lat, lon) {
   
   up <- data.frame(Date=format(up.time,"%F"),Sunrise=up.time)
   down <- data.frame(Date=format(down.time,"%F"),Sunset=down.time)
-  SunriseSunset <- full_join(up, down, by="Date")
+  SunriseSunset <- full_join(up, down, by="Date") %>% arrange(Date)
+  SunriseSunset$Day <- format(SunriseSunset$Sunrise,"%A")
+  SunriseSunset$Day[is.na(SunriseSunset$Day)] <- format(SunriseSunset$Sunset,"%A")
+  SunriseSunset <- SunriseSunset %>% select(Date, Day, Sunrise, Sunset)
   SunriseSunset
 }
 

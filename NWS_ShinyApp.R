@@ -14,9 +14,25 @@ library(lubridate)
 library(pander)
 library(shinyWidgets)
 library(maptools)
+library(rebird)
 
 # Read in the places table containing data on their latitude and longitude
 places <- read.table("places.txt",header=TRUE)
+
+
+eBirdNotables <- function(lat, lon, back=7, dist=25, maxN = 25) {
+  a <- ebirdnotable(lat=lat, lng=lon,back=7, dist=25)
+  if (nrow(a) > 0) {
+    a$obsDt <- as.Date(a$obsDt)
+    a <- a %>% select(obsDt, comName, locName) %>% 
+      distinct() %>% 
+      rename(Date=obsDt,Name=comName,Location=locName)
+  } else {
+    a <- data.frame(Message="No recent notable eBird sightings")
+  }
+  return(head(a, maxN))
+}
+
 
 SunRiseSet <- function(db, tz, lat, lon) {
   # Change the p.time into the local time zone
@@ -39,7 +55,10 @@ SunRiseSet <- function(db, tz, lat, lon) {
   
   up <- data.frame(Date=format(up.time,"%F"),Sunrise=up.time)
   down <- data.frame(Date=format(down.time,"%F"),Sunset=down.time)
-  SunriseSunset <- full_join(up, down, by="Date")
+  SunriseSunset <- full_join(up, down, by="Date") %>% arrange(Date)
+  SunriseSunset$Day <- format(SunriseSunset$Sunrise,"%A")
+  SunriseSunset$Day[is.na(SunriseSunset$Day)] <- format(SunriseSunset$Sunset,"%A")
+  SunriseSunset <- SunriseSunset %>% select(Date, Day, Sunrise, Sunset)
   SunriseSunset
 }
 
@@ -191,9 +210,13 @@ mapUI <- function(id, label = "Location in map"){
     tags$hr(),
   # textOutput(ns("coords")),
   # textOutput(ns("col")),
+    tags$h3("Location"),
     textOutput(ns("lat_lon")),
    # textOutput(ns("md")), # for median latitude
+   tags$h3("Current conditions"),
    addSpinner(verbatimTextOutput(ns("current")), spin="circle"),
+   tags$h3("Forecast"),
+   verbatimTextOutput(ns("forecast_first_period")),
    plotOutput(ns("TempPlot"), height="auto"),
    plotOutput(ns("PrecipProbPlot"), height="auto"),
    plotOutput(ns("BarometerPlot"), height="auto"),
@@ -202,6 +225,66 @@ mapUI <- function(id, label = "Location in map"){
    htmlOutput(ns("NWSPlot")),
    leafletOutput(ns("lf2"))
   )
+}
+
+ebirdUI <- function(id, label = "Location in map"){
+  ns <- NS(id)
+  
+  tagList(
+    geoloc::button_geoloc(ns("myBtn"), "Get my Location"),
+    selectInput(ns("row"), "Select location:",
+                c("Home"=1,"Cabin"=2,"Cape May"=3,"Oradell"=4,"South Hadley"=5,"Reading"=6),
+                width="10%", selectize = FALSE),
+    tags$hr(),
+    tags$h3("Recent notable eBird sightings"),
+    textOutput(ns("lat_lon")),
+    addSpinner(verbatimTextOutput(ns("eBirdTable")), spin="circle"),
+  )
+}
+
+ebirdServer <- function(id) {
+  moduleServer(id,
+               function(input, output, session) {
+                 mydata <- reactive({
+                   places
+                 })
+                 lat <- reactiveVal()
+                 lon <- reactiveVal()
+                 lat_lon <- reactiveVal(value = c("lat" = 0, "lon" = 0))
+                 
+                 observeEvent(input$myBtn_lon, {
+                   lat <- as.numeric(input$myBtn_lat)
+                   lon <- as.numeric(input$myBtn_lon)
+                   
+                   lat_lon <- c("lat" = lat, "lon" = lon)
+                   lat_lon(c("lat" = lat, "lon" = lon))
+                   lat(as.numeric(input$myBtn_lat))
+                   lon(as.numeric(input$myBtn_lon))
+                   output$lat_lon <- renderText({
+                     paste0("Current location: ", lat(), ", ", lon())
+                   })
+                 })
+                 
+                 observeEvent(input$row, {
+                   lon <- mydata()$Lon[as.numeric(input$row)]
+                   lat <- mydata()$Lat[as.numeric(input$row)]
+                   place <- mydata()$Place[as.numeric(input$row)]
+                   
+                   lat_lon <- c("lat" = lat, "lon" = lon)
+                   lat_lon(c("lat" = lat, "lon" = lon))
+                   lon(mydata()$Lon[as.numeric(input$row)])
+                   lat(mydata()$Lat[as.numeric(input$row)])
+                   output$lat_lon <- renderText({
+                     paste0(gsub("_", " ", place), ": ", lat(), ", ", lon())
+                   })
+                  
+                   output$eBirdTable <- renderPrint({
+                     req(lat_lon())
+                    pander(eBirdNotables(lat(),lon()))
+                   })
+                    
+                 })
+               })
 }
 
 mapServer <- function(id){
@@ -215,12 +298,6 @@ mapServer <- function(id){
       lat_lon <- reactiveVal(value = c("lat"=0,"lon"=0))
       
       weather_list_r <- reactive({
-  #      req(input$myBtn_lon)
-  #      req(input$myBtn_lat)
-        
-  #      lat <- as.numeric(input$myBtn_lat)
-  #      lon <- as.numeric(input$myBtn_lon)
-  
         req(lat_lon())
         Lon <- lat_lon()["lon"]
         names(Lon) <- NULL
@@ -228,6 +305,13 @@ mapServer <- function(id){
         names(Lat) <- NULL
         
         weather_list <- get_NWS_data(Lat, Lon)
+      })
+      
+      forecast_r <- reactive({
+        req(lat_lon())
+      
+        weather_list <- weather_list_r()
+        forecast <- get_forecast(weather_list)
       })
       
       output$coords <- renderText(paste(input$myBtn_lat, input$myBtn_lon, sep = ", "))
@@ -329,10 +413,10 @@ mapServer <- function(id){
         db$Time <- as.POSIXct(db$startTime, format="%FT%T", tz = tz)
         
         SunriseSunset <- SunRiseSet(db=db, tz = tz, lat= lat(), lon=lon())
-        SunriseSunset$Day <- format(SunriseSunset$Sunrise,"%A")
+        # SunriseSunset$Day <- format(SunriseSunset$Sunrise,"%A")
         SunriseSunset$Sunrise <- format(SunriseSunset$Sunrise, "%H:%M:%S")
         SunriseSunset$Sunset <- format(SunriseSunset$Sunset, "%H:%M:%S")
-        SunriseSunset <- SunriseSunset %>% select(Date, Day, Sunrise, Sunset)
+        # SunriseSunset <- SunriseSunset %>% select(Date, Day, Sunrise, Sunset)
         pander(SunriseSunset)
       })
       
@@ -340,8 +424,16 @@ mapServer <- function(id){
         req(lat_lon())
 
         weather_list <- weather_list_r()
-        forecast <- get_forecast(weather_list)
+        forecast <- forecast_r()
         print.weather_forecast(forecast)
+      })
+      
+      output$forecast_first_period <- renderPrint({
+        req(lat_lon())
+        
+        weather_list <- weather_list_r()
+        forecast <- forecast_r()
+        print.weather_forecast(forecast, nperiods = 1)
       })
       
       output$TempPlot <- renderPlot(height=800,units="px",{ 
@@ -438,7 +530,7 @@ mapServer <- function(id){
                 panel.grid.major = element_blank(), 
                 panel.grid.minor = element_blank(),
                 text = element_text(size = 20)) +
-          ggtitle("Preciptiation Probability forecast")
+          ggtitle("Precipitation Probability")
         
         db1 <- grid_forecast$properties$skyCover$values
         db1$lab <- as.character(db1$value)
@@ -461,7 +553,7 @@ mapServer <- function(id){
                 panel.grid.major = element_blank(), 
                 panel.grid.minor = element_blank(),
                 text = element_text(size = 20)) +
-          ggtitle("Sky Cover forecast")
+          ggtitle("Sky Cover")
         
         print(hPrecipProb | hSkyCover)
         
@@ -549,12 +641,15 @@ ui <- fluidPage(
   tabPanel("Maps",
            includeHTML("Maps.html")),
   tabPanel("BirdCast",
-           includeHTML("BirdCast.html"))
+           includeHTML("BirdCast.html")),
+  tabPanel("eBird",
+           ebirdUI("map2"))
   )
 )
 
 server <- function(input, output, session) {
   mapServer("map1")
+  ebirdServer("map2")
   
 }
 
