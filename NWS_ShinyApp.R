@@ -218,6 +218,7 @@ mapUI <- function(id, label = "Location in map"){
    tags$h3("Forecast"),
    verbatimTextOutput(ns("forecast_first_period")),
    plotOutput(ns("TempPlot"), height="auto"),
+   plotOutput(ns("ShortTermPrecipProb"), height="auto"),
    plotOutput(ns("PrecipProbPlot"), height="auto"),
    plotOutput(ns("BarometerPlot"), height="auto"),
    verbatimTextOutput(ns("forecast")),
@@ -498,6 +499,30 @@ mapServer <- function(id){
         
         print(pTemp / pWind)
         })
+      
+      output$ShortTermPrecipProb <- renderPlot(height=600,units="px",{ 
+        req(lat_lon())
+        
+        weather_list <- weather_list_r()
+        tz <- weather_list$properties$timeZone
+        
+        grid_forecast <- get_grid_forecast(weather_list)
+        
+        db <- grid_forecast$properties$probabilityOfPrecipitation$values
+        db$lab <- as.character(db$value)
+        db$lab[1:length(db$value) %% 4 != 1] <- NA
+        db <- rename(db, Time=validTime, `precipitation probability`=value)
+        db$Time <- as.POSIXct(db$Time, format="%FT%T",tz=tz)
+        
+        shortTermPrecipProb <- ggplot(data = db[hrs,], aes(x=Time, y=`precipitation probability`)) +
+          geom_col(fill="skyblue") +
+          geom_text(aes(y=`precipitation probability`,label=`precipitation probability`),vjust=-0.2, size=6) +
+          scale_x_datetime(labels = date_format("%H", tz=tz), breaks="1 hours") + 
+          ggtitle("12 hour precipitation forecast") +
+          theme(text = element_text(size = 20))
+        
+        print(shortTermPrecipProb)
+      })
       
       output$PrecipProbPlot <- renderPlot(height=600,units="px",{ 
         req(lat_lon())
