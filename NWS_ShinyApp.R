@@ -402,7 +402,7 @@ mapServer <- function(id){
         weather_list <- weather_list_r()
         current_conditions <- get_current_conditions(weather_list)
         pander(current_conditions[,c("Name","Conditions" , "Temperature",
-"WindChill" ,  "Wind", "WindGusts")], split.table=100)
+"WindChill" ,  "Wind", "WindGusts")], split.table=200)
       })
       
       output$sunrise <- renderPrint({
