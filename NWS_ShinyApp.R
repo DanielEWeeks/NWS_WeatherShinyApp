@@ -512,7 +512,9 @@ mapServer <- function(id){
         db$lab <- as.character(db$value)
         db$lab[1:length(db$value) %% 4 != 1] <- NA
         db <- rename(db, Time=validTime, `precipitation probability`=value)
-        db$Time <- as.POSIXct(db$Time, format="%FT%T",tz=tz)
+        db$Time <- as.POSIXct(db$Time, format="%FT%T",tz="UTC")
+        db$Time <- with_tz(db$Time,tz=tz)
+        
         
         hrs <- c(2:13)
         shortTermPrecipProb <- ggplot(data = db[hrs,], aes(x=Time, y=`precipitation probability`)) +
@@ -537,14 +539,15 @@ mapServer <- function(id){
         db$lab <- as.character(db$value)
         db$lab[1:length(db$value) %% 4 != 1] <- NA
         db <- rename(db, Time=validTime, `precipitation probability`=value)
-        db$Time <- as.POSIXct(db$Time, format="%FT%T",tz=tz)
+        db$Time <- as.POSIXct(db$Time, format="%FT%T",tz="UTC")
+        db$Time <- with_tz(db$Time,tz=tz)
         
         tmp <- db
         tmp$y <- "Precip. Prob."
         tmp$hj <- rep(c(0.8,0,-0.8), length.out=nrow(db))
         
         hPrecipProb <- ggplot(data=tmp, aes(x=y,y=Time,fill=`precipitation probability`)) + 
-          geom_tile(height=3600*6) +
+          geom_tile(height=3600*1) +
           geom_text_repel(aes(label=`precipitation probability`), size=5, point.size=NA, direction="x", min.segment.length = 10, na.rm = TRUE, verbose = FALSE) +
           scale_y_datetime(labels = date_format("%a %H", tz=tz), breaks="6 hours") +
           coord_y_datetime(ylim = c(max(tmp$Time), min(tmp$Time))) +
@@ -562,12 +565,13 @@ mapServer <- function(id){
         db1$lab <- as.character(db1$value)
         db1$lab[1:length(db1$value) %% 6 != 1] <- NA
         db1 <- rename(db1, Time=validTime, `sky cover`=value)
-        db1$Time <- as.POSIXct(db1$Time, format="%FT%T",tz=tz)
+        db1$Time <- as.POSIXct(db1$Time, format="%FT%T",tz="UTC")
+        db1$Time <- with_tz(db1$Time,tz=tz)
         tmp <- db1
         tmp$y <- "Sky Cover"
         
         hSkyCover <- ggplot(data=tmp, aes(x=y,y=Time,fill=`sky cover`)) + 
-          geom_tile(height=3600*6) +
+          geom_tile(height=3600*1) +
           geom_text_repel(aes(label=lab), size=5, point.size=NA, direction="x", min.segment.length = 10, na.rm=TRUE) +
           scale_y_datetime(labels = date_format("%a %H", tz=tz), breaks="6 hours") +
           coord_y_datetime(ylim = c(max(tmp$Time), min(tmp$Time))) +
@@ -597,7 +601,8 @@ mapServer <- function(id){
         db$lab <- as.character(db$value)
         db$lab[1:length(db$value) %% 6 != 1] <- NA
         db <- dplyr::rename(db, Time=validTime, pressure=value)
-        db$Time <- as.POSIXct(db$Time, format="%FT%T",tz=tz)
+        db$Time <- as.POSIXct(db$Time, format="%FT%T",tz="UTC")
+        db$Time <- with_tz(db$Time,tz=tz)
         
         pPressure <- ggplot(data = db, aes(x=Time, y=pressure)) + 
           geom_line(linewidth=1.2) + 
