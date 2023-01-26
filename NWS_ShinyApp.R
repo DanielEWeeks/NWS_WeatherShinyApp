@@ -33,6 +33,19 @@ eBirdNotables <- function(lat, lon, back=7, dist=25, maxN = 25) {
   return(head(a, maxN))
 }
 
+eBirdNotablesMap <- function(lat, lon, back=7, dist=25, maxN = 25) {
+  a <- ebirdnotable(lat=lat, lng=lon,back=7, dist=25)
+  if (nrow(a) > 0) {
+    a$obsDt <- as.Date(a$obsDt)
+    a <- a %>% select(obsDt, comName, locName, lat, lng) %>% 
+      distinct() %>% 
+      rename(Date=obsDt,Name=comName,Location=locName)
+  } else {
+    a <- data.frame(Message="No recent notable eBird sightings")
+  }
+  return(head(a, maxN))
+}
+
 
 SunRiseSet <- function(db, tz, lat, lon) {
   # Change the p.time into the local time zone
@@ -240,6 +253,7 @@ ebirdUI <- function(id, label = "Location in map"){
     tags$h3("Recent notable eBird sightings"),
     textOutput(ns("lat_lon")),
     addSpinner(verbatimTextOutput(ns("eBirdTable")), spin="circle"),
+    leafletOutput(ns("lf_eBird"))
   )
 }
 
@@ -283,6 +297,27 @@ ebirdServer <- function(id) {
                      req(lat_lon())
                     pander(eBirdNotables(lat(),lon()))
                    })
+                   
+                   output$lf_eBird <- renderLeaflet({
+                     req(lat_lon())
+                     Lon <- lat_lon()["lon"]
+                     names(Lon) <- NULL
+                     Lat <- lat_lon()["lat"] 
+                     names(Lat) <- NULL
+                     b <- eBirdNotablesMap(lat(),lon())
+                     if (!("Message" %in% names(b))) {
+                     leaflet(data=b) %>%
+                       addTiles() %>%
+                       setView(Lon, Lat, zoom = 10) %>%
+                       addMarkers(Lon, Lat, label = "You're here!",labelOptions = labelOptions(noHide = T)) %>% 
+                       addMarkers(lng=~lng, lat=~lat,label = ~Name,labelOptions = labelOptions(noHide = T))
+                     } else {
+                       leaflet() %>%
+                         addTiles() %>%
+                         setView(Lon, Lat, zoom = 10) %>%
+                         addMarkers(Lon, Lat, label = "You're here!",labelOptions = labelOptions(noHide = T))
+                     }
+                     })
                     
                  })
                })
