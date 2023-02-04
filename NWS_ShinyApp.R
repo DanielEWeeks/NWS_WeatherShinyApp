@@ -19,6 +19,29 @@ library(rebird)
 # Read in the places table containing data on their latitude and longitude
 places <- read.table("places.txt",header=TRUE)
 
+RetrieveHotspotsList <- function(lat, lon, back=2, dist = 25) {
+  hotspots <- ebirdhotspotlist(lat=lat, lng=lon, back=back, dist=dist)
+  if (nrow(hotspots) > 0) {
+    ll <- hotspots %>% select(lng,lat)
+    ll2 <- bind_rows(data.frame(lng=lon, lat=lat), ll)
+    ll2 <- as.matrix(ll2, ncol=2)
+    km <- spDistsN1(ll2, ll2[1,], longlat=TRUE)
+    hotspots$km <- km[-1]
+    hotspots$miles <- round(hotspots$km/1.609344, 2)
+    hotspots <- hotspots %>% arrange(km)
+    return(hotspots)
+  } else {
+    return(hotspots) 
+  }
+}
+
+HotspotBirdList <- function(i, hotspots, back=2) {
+  hotspotList <- ebirdregion(loc=hotspots$locId[i], back=back)
+  LocName <- sym(hotspots$locName[i])
+  hotspotList <- hotspotList %>% 
+    select(comName,howMany,obsDt) %>% 
+    rename(Date=obsDt,!!LocName:=comName,Number=howMany)
+}
 
 eBirdNotables <- function(lat, lon, back=7, dist=25, maxN = 25) {
   a <- ebirdnotable(lat=lat, lng=lon,back=7, dist=25)
@@ -253,7 +276,9 @@ ebirdUI <- function(id, label = "Location in map"){
     tags$h3("Recent notable eBird sightings"),
     textOutput(ns("lat_lon")),
     addSpinner(verbatimTextOutput(ns("eBirdTable")), spin="circle"),
-    leafletOutput(ns("lf_eBird"))
+    leafletOutput(ns("lf_eBird")),
+    tags$h3("Recent hotspot sightings"),
+    verbatimTextOutput(ns("hotspotList"))
   )
 }
 
@@ -296,6 +321,27 @@ ebirdServer <- function(id) {
                    output$eBirdTable <- renderPrint({
                      req(lat_lon())
                     pander(eBirdNotables(lat(),lon()))
+                   })
+                   
+                   output$hotspotList <- renderPrint({
+                     req(lat_lon())
+                     hotspots <- RetrieveHotspotsList(lat=lat(), lon=lon())
+                     if (nrow(hotspots)>0) {
+                     i <- 1
+                     hotspotList <- HotspotBirdList(i=i, hotspots = hotspots)
+                     pander(hotspotList)
+                     i <- 2
+                     hotspotList <- HotspotBirdList(i=i, hotspots = hotspots)
+                     pander(hotspotList)
+                     i <- 3
+                     hotspotList <- HotspotBirdList(i=i, hotspots = hotspots)
+                     pander(hotspotList)
+                     i <- 4
+                     hotspotList <- HotspotBirdList(i=i, hotspots = hotspots)
+                     pander(hotspotList)
+                     } else {
+                       pander(data.frame(Message="No nearby hotspots"))
+                     }
                    })
                    
                    output$lf_eBird <- renderLeaflet({
