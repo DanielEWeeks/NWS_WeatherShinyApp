@@ -31,13 +31,14 @@ RetrieveHotspotsList <- function(lat, lon, back=2, dist = 25) {
     hotspots <- hotspots %>% arrange(km)
     return(hotspots)
   } else {
+    hotspots$locName <- "No nearby hotspots"
     return(hotspots) 
   }
 }
 
 HotspotBirdList <- function(i, hotspots, back=2) {
   hotspotList <- ebirdregion(loc=hotspots$locId[i], back=back)
-  LocName <- sym(hotspots$locName[i])
+  LocName <- sym(paste0(hotspots$locName[i]," (",hotspots$miles[i]," miles)"))
   hotspotList <- hotspotList %>% 
     select(comName,howMany,obsDt) %>% 
     rename(Date=obsDt,!!LocName:=comName,Number=howMany)
@@ -272,6 +273,7 @@ ebirdUI <- function(id, label = "Location in map"){
     selectInput(ns("row"), "Select location:",
                 c("Home"=1,"Cabin"=2,"Cape May"=3,"Oradell"=4,"South Hadley"=5,"Reading"=6),
                 width="10%", selectize = FALSE),
+    selectInput(inputId = ns("hotspots"), label = "Hotspots",choices = NULL, selectize = FALSE),
     tags$hr(),
     tags$h3("Recent notable eBird sightings"),
     textOutput(ns("lat_lon")),
@@ -292,6 +294,7 @@ ebirdServer <- function(id) {
                  lon <- reactiveVal()
                  lat_lon <- reactiveVal(value = c("lat" = 0, "lon" = 0))
                  
+
                  observeEvent(input$myBtn_lon, {
                    lat <- as.numeric(input$myBtn_lat)
                    lon <- as.numeric(input$myBtn_lon)
@@ -323,13 +326,34 @@ ebirdServer <- function(id) {
                     pander(eBirdNotables(lat(),lon()))
                    })
                    
+                   choices_hotspots <- reactive({
+                     req(lat_lon())
+                     choices_hotspots <- RetrieveHotspotsList(lat=lat(), lon=lon()) 
+                   })
+                   
+                   observe({
+                     updateSelectInput(session = session, inputId = "hotspots", 
+                                       choices = choices_hotspots()$locName) 
+#                                      choices = paste0(choices_hotspots()$locName," (",choices_hotspots()$miles," miles)"))
+                   })
+                   
+                   
                    output$hotspotList <- renderPrint({
                      req(lat_lon())
                      hotspots <- RetrieveHotspotsList(lat=lat(), lon=lon())
                      if (nrow(hotspots)>0) {
+                       j <- which(input$hotspots == hotspots$locName) 
+                       if (length(j) > 0) {
+                       hotspotList <- HotspotBirdList(i=j, hotspots = hotspots)
+                       pander(hotspotList)
+                       } else {
+                         j <- 1
+                       }
+                     if(j != 1) {
                      i <- 1
                      hotspotList <- HotspotBirdList(i=i, hotspots = hotspots)
                      pander(hotspotList)
+                     }
                      i <- 2
                      hotspotList <- HotspotBirdList(i=i, hotspots = hotspots)
                      pander(hotspotList)
