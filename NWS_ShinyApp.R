@@ -45,7 +45,7 @@ HotspotBirdList <- function(i, hotspots, back=2) {
 }
 
 eBirdNotables <- function(lat, lon, back=7, dist=25, maxN = 25) {
-  a <- ebirdnotable(lat=lat, lng=lon,back=7, dist=25)
+  a <- ebirdnotable(lat=lat, lng=lon,back=back, dist=dist)
   if (nrow(a) > 0) {
     a$obsDt <- as.Date(a$obsDt)
     a <- a %>% select(obsDt, comName, locName) %>% 
@@ -58,7 +58,7 @@ eBirdNotables <- function(lat, lon, back=7, dist=25, maxN = 25) {
 }
 
 eBirdNotablesMap <- function(lat, lon, back=7, dist=25, maxN = 25) {
-  a <- ebirdnotable(lat=lat, lng=lon,back=7, dist=25)
+  a <- ebirdnotable(lat=lat, lng=lon,back=back, dist=dist)
   if (nrow(a) > 0) {
     a$obsDt <- as.Date(a$obsDt)
     a <- a %>% select(obsDt, comName, locName, lat, lng) %>% 
@@ -273,14 +273,18 @@ ebirdUI <- function(id, label = "Location in map"){
     selectInput(ns("row"), "Select location:",
                 c("Home"=1,"Cabin"=2,"Cape May"=3,"Oradell"=4,"South Hadley"=5,"Reading"=6),
                 width="10%", selectize = FALSE),
-    selectInput(inputId = ns("hotspots"), label = "Hotspots",choices = NULL, selectize = FALSE),
+    sliderInput(ns("dist"), "Distance (km)",
+                min = 1, max = 50, value = 25
+    ),
     tags$hr(),
     tags$h3("Recent notable eBird sightings"),
     textOutput(ns("lat_lon")),
     addSpinner(verbatimTextOutput(ns("eBirdTable")), spin="circle"),
     leafletOutput(ns("lf_eBird")),
     tags$h3("Recent hotspot sightings"),
-    verbatimTextOutput(ns("hotspotList"))
+    selectInput(inputId = ns("hotspots"), label = "Hotspots",choices = NULL, selectize = FALSE),
+    verbatimTextOutput(ns("hotspotList")),
+    leafletOutput(ns("lf_hotspots"))
   )
 }
 
@@ -293,7 +297,17 @@ ebirdServer <- function(id) {
                  lat <- reactiveVal()
                  lon <- reactiveVal()
                  lat_lon <- reactiveVal(value = c("lat" = 0, "lon" = 0))
+
+                 hotspots_r <- reactive({
+                   req(lat_lon(), input$dist)
+                   hotspots_r <- suppressMessages(RetrieveHotspotsList(lat=lat(), lon=lon(), dist = input$dist))
+                 }) 
                  
+                 eBirdNotables_r <- reactive({
+                   req(lat_lon(), input$dist)
+                   eBirdNotables_r <- eBirdNotables(lat(),lon(), dist = input$dist)
+                 })
+                
 
                  observeEvent(input$myBtn_lon, {
                    lat <- as.numeric(input$myBtn_lat)
@@ -322,13 +336,13 @@ ebirdServer <- function(id) {
                    })
                   
                    output$eBirdTable <- renderPrint({
-                     req(lat_lon())
-                    pander(eBirdNotables(lat(),lon()))
+                     req(lat_lon(), input$dist)
+                    pander(eBirdNotables_r())
                    })
                    
                    choices_hotspots <- reactive({
-                     req(lat_lon())
-                     choices_hotspots <- RetrieveHotspotsList(lat=lat(), lon=lon()) 
+                     req(lat_lon(), input$dist)
+                     choices_hotspots <- hotspots_r() 
                    })
                    
                    observe({
@@ -339,55 +353,91 @@ ebirdServer <- function(id) {
                    
                    
                    output$hotspotList <- renderPrint({
-                     req(lat_lon())
-                     hotspots <- RetrieveHotspotsList(lat=lat(), lon=lon())
+                     req(lat_lon(),input$dist)
+                     hotspots <- hotspots_r()
+                     N.hotspots <- nrow(hotspots)
                      if (nrow(hotspots)>0) {
                        j <- which(input$hotspots == hotspots$locName) 
                        if (length(j) > 0) {
-                       hotspotList <- HotspotBirdList(i=j, hotspots = hotspots)
-                       pander(hotspotList)
+                         hotspotList <- HotspotBirdList(i=j, hotspots = hotspots)
+                         pander(hotspotList)
                        } else {
                          j <- 1
                        }
-                     if(j != 1) {
-                     i <- 1
-                     hotspotList <- HotspotBirdList(i=i, hotspots = hotspots)
-                     pander(hotspotList)
-                     }
-                     i <- 2
-                     hotspotList <- HotspotBirdList(i=i, hotspots = hotspots)
-                     pander(hotspotList)
-                     i <- 3
-                     hotspotList <- HotspotBirdList(i=i, hotspots = hotspots)
-                     pander(hotspotList)
-                     i <- 4
-                     hotspotList <- HotspotBirdList(i=i, hotspots = hotspots)
-                     pander(hotspotList)
+                       if(j != 1) {
+                         i <- 1
+                         hotspotList <- HotspotBirdList(i=i, hotspots = hotspots)
+                         pander(hotspotList)
+                       }
+                       i <- 2
+                       if (N.hotspots >=i & j!=i) {
+                         hotspotList <- HotspotBirdList(i=i, hotspots = hotspots)
+                         pander(hotspotList)
+                       }
+                       i <- 3
+                       if (N.hotspots >=i & j!=i) {
+                         hotspotList <- HotspotBirdList(i=i, hotspots = hotspots)
+                         pander(hotspotList)
+                       }
+                       i <- 4
+                       if (N.hotspots >=i & j!=i) {
+                         hotspotList <- HotspotBirdList(i=i, hotspots = hotspots)
+                         pander(hotspotList)
+                       }
                      } else {
                        pander(data.frame(Message="No nearby hotspots"))
                      }
                    })
                    
                    output$lf_eBird <- renderLeaflet({
+                     req(lat_lon(), input$dist)
+                     Lon <- lat_lon()["lon"]
+                     names(Lon) <- NULL
+                     Lat <- lat_lon()["lat"] 
+                     names(Lat) <- NULL
+                     b <- eBirdNotablesMap(lat(),lon(), dist = input$dist)
+                     if (!("Message" %in% names(b))) {
+                     leaflet(data=b) %>%
+                       addTiles() %>%
+                       addScaleBar() %>% 
+                       setView(Lon, Lat, zoom = 10) %>%
+                       addMarkers(Lon, Lat, label = "You're here!",labelOptions = labelOptions(noHide = T)) %>% 
+                       addMarkers(lng=~lng, lat=~lat,label = ~Name,labelOptions = labelOptions(noHide = T)) %>% 
+                         addCircles(lng = Lon, lat = Lat, fill = FALSE, radius = input$dist*1000)
+                     } else {
+                       leaflet() %>%
+                         addTiles() %>%
+                         setView(Lon, Lat, zoom = 10) %>%
+                         addMarkers(Lon, Lat, label = "You're here!",labelOptions = labelOptions(noHide = T)) %>% 
+                         addCircles(lng = Lon, lat = Lat, fill = FALSE, radius = input$dist*1000)
+                     }
+                     })
+                   
+                   output$lf_hotspots <- renderLeaflet({
                      req(lat_lon())
                      Lon <- lat_lon()["lon"]
                      names(Lon) <- NULL
                      Lat <- lat_lon()["lat"] 
                      names(Lat) <- NULL
-                     b <- eBirdNotablesMap(lat(),lon())
-                     if (!("Message" %in% names(b))) {
-                     leaflet(data=b) %>%
-                       addTiles() %>%
-                       setView(Lon, Lat, zoom = 10) %>%
-                       addMarkers(Lon, Lat, label = "You're here!",labelOptions = labelOptions(noHide = T)) %>% 
-                       addMarkers(lng=~lng, lat=~lat,label = ~Name,labelOptions = labelOptions(noHide = T))
+                     b <-  hotspots_r()
+                     if (nrow(b)>0) {
+                       leaflet(data=b) %>%
+                         addTiles() %>%
+                         addScaleBar() %>% 
+                         setView(Lon, Lat, zoom = 10) %>%
+                         addMarkers(Lon, Lat, label = "You're here!",labelOptions = labelOptions(noHide = T)) %>% 
+                         addMarkers(lng=~lng, lat=~lat,label = ~locName,labelOptions = labelOptions(noHide = T)) %>% 
+                         addCircles(lng = Lon, lat = Lat, fill = FALSE, radius = input$dist*1000)
                      } else {
                        leaflet() %>%
                          addTiles() %>%
+                         addScaleBar() %>% 
                          setView(Lon, Lat, zoom = 10) %>%
-                         addMarkers(Lon, Lat, label = "You're here!",labelOptions = labelOptions(noHide = T))
+                         addMarkers(Lon, Lat, label = "You're here!",labelOptions = labelOptions(noHide = T)) %>% 
+                         addCircles(lng = Lon, lat = Lat, fill = FALSE, radius = input$dist*1000)
                      }
-                     })
+                   })
+                   
                     
                  })
                })
@@ -488,6 +538,7 @@ mapServer <- function(id){
         names(Lat) <- NULL
         leaflet() %>%
           addTiles() %>%
+          addScaleBar() %>% 
           setView(Lon, Lat, zoom = 17) %>%
           addMarkers(Lon, Lat, label = "You're here!")
       })
