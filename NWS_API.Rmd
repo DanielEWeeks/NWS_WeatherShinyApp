@@ -704,6 +704,37 @@ hPrecipProb | hSkyCover
 ```
 
 
+# Area forecast discussions
+
+Need to know the name of the nearest National Weather Service center.
+
+Looks like that is in `weather_list$properties$cwa`
+
+```
+/products/types/{typeId}/locations/{locationId}
+```
+
+```{r}
+# Get the station name:
+weather_list$properties$cwa
+sv <- GET("https://api.weather.gov/products/types/AFD/locations")
+locations <- fromJSON(content(sv, as="text", encoding = "UTF-8"))
+grep("Pittsburgh",locations$locations,value=TRUE)
+names(grep("Pittsburgh",locations$locations,value=TRUE))
+
+# Pull list of Area Forecast Discussions
+sv <- GET("https://api.weather.gov/products/types/AFD/locations/PBZ")
+AFDs <- fromJSON(content(sv, as="text", encoding = "UTF-8"))
+
+# Pull the most recent Area Forecast Discussion
+sv <- GET(AFDs$`@graph`$`@id`[1])
+currentAFD <- fromJSON(content(sv, as="text", encoding = "UTF-8"))
+
+# Print out the most recent Area Forecast Discussion
+cat(currentAFD$productText)
+```
+
+
 # Session Information
 
 ```{r}
