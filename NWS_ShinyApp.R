@@ -261,6 +261,7 @@ mapUI <- function(id, label = "Location in map"){
    verbatimTextOutput(ns("forecast")),
    verbatimTextOutput(ns("sunrise")),
    htmlOutput(ns("NWSPlot")),
+   verbatimTextOutput(ns("ForecastDiscussion")),
    leafletOutput(ns("lf2"))
   )
 }
@@ -575,6 +576,24 @@ mapServer <- function(id){
         SunriseSunset$Sunset <- format(SunriseSunset$Sunset, "%H:%M:%S")
         # SunriseSunset <- SunriseSunset %>% select(Date, Day, Sunrise, Sunset)
         pander(SunriseSunset)
+      })
+      
+      output$ForecastDiscussion <- renderPrint({
+        req(lat_lon())
+        
+        weather_list <- weather_list_r()
+        url <- paste0("https://api.weather.gov/products/types/AFD/locations/",weather_list$properties$cwa)
+        # Pull list of Area Forecast Discussions
+        sv <- GET(url)
+        AFDs <- fromJSON(content(sv, as="text", encoding = "UTF-8"))
+        
+        # Pull the most recent Area Forecast Discussion
+        sv <- GET(AFDs$`@graph`$`@id`[1])
+        currentAFD <- fromJSON(content(sv, as="text", encoding = "UTF-8"))
+        
+        # Print out the most recent Area Forecast Discussion
+        cat(currentAFD$productText)
+        
       })
       
       output$forecast <- renderPrint({
