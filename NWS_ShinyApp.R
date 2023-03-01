@@ -240,36 +240,55 @@ mapUI <- function(id, label = "Location in map"){
   ns <- NS(id)
   
   tagList(
+    tags$div(id="Top"),
     geoloc::button_geoloc(ns("myBtn"), "Get my Location"),
     selectInput(ns("row"), "Select location:",
                 c("Home"=1,"Cabin"=2,"Cape May"=3,"Oradell"=4,"South Hadley"=5,"Reading"=6),
                 width="10%", selectize = FALSE),
     tags$hr(),
-  # textOutput(ns("coords")),
-  # textOutput(ns("col")),
+    # textOutput(ns("coords")),
+    # textOutput(ns("col")),
     tags$h3("Location"),
     textOutput(ns("lat_lon")),
     tags$a(href="#Forecast","Forecast;"),
     tags$a(href="#Windy","Windy;"),
     tags$a(href="#NWSplot","NWSplot;"),
     tags$a(href="#AFD","AFD"),
-   # textOutput(ns("md")), # for median latitude
-   tags$h3("Current conditions"),
-   addSpinner(verbatimTextOutput(ns("current")), spin="circle"),
-   tags$h3("Forecast"),
-   verbatimTextOutput(ns("forecast_first_period")),
-   plotOutput(ns("TempPlot"), height="auto"),
-   plotOutput(ns("ShortTermPrecipProb"), height="auto"),
-   plotOutput(ns("PrecipProbPlot"), height="auto"),
-   plotOutput(ns("BarometerPlot"), height="auto"),
-   tags$div(id="Forecast"),
-   verbatimTextOutput(ns("forecast")),
-   verbatimTextOutput(ns("sunrise")),
-   htmlOutput(ns("Windy")),
-   htmlOutput(ns("NWSPlot")),
-   tags$div(id="AFD"),
-   verbatimTextOutput(ns("ForecastDiscussion")),
-   leafletOutput(ns("lf2"))
+    # textOutput(ns("md")), # for median latitude
+    tags$h3("Current conditions"),
+    addSpinner(verbatimTextOutput(ns("current")), spin="circle"),
+    tags$h3("Forecast"),
+    verbatimTextOutput(ns("forecast_first_period")),
+    plotOutput(ns("TempPlot"), height="auto"),
+    plotOutput(ns("ShortTermPrecipProb"), height="auto"),
+    plotOutput(ns("PrecipProbPlot"), height="auto"),
+    plotOutput(ns("BarometerPlot"), height="auto"),
+    tags$div(id="Forecast"),
+    tags$a(href="#Top","Top;"),
+    tags$a(href="#Windy","Windy;"),
+    tags$a(href="#NWSplot","NWSplot;"),
+    tags$a(href="#AFD","AFD"),
+    verbatimTextOutput(ns("forecast")),
+    verbatimTextOutput(ns("sunrise")),
+    tags$div(id="Windy"),
+    tags$a(href="#Top","Top;"),
+    tags$a(href="#Forecast","Forecast;"),
+    tags$a(href="#NWSplot","NWSplot;"),
+    tags$a(href="#AFD","AFD"),
+    htmlOutput(ns("Windy")),
+    tags$div(id="NWSplot"),
+    tags$a(href="#Top","Top;"),
+    tags$a(href="#Forecast","Forecast;"),
+    tags$a(href="#Windy","Windy;"),
+    tags$a(href="#AFD","AFD"),
+    htmlOutput(ns("NWSPlot")),
+    tags$div(id="AFD"),
+    tags$a(href="#Top","Top;"),
+    tags$a(href="#Forecast","Forecast;"),
+    tags$a(href="#Windy","Windy;"),
+    tags$a(href="#NWSplot","NWSplot"),
+    verbatimTextOutput(ns("ForecastDiscussion")),
+    leafletOutput(ns("lf2"))
   )
 }
 
@@ -837,8 +856,7 @@ mapServer <- function(id){
           # tags$img(src='https://www.wpc.ncep.noaa.gov/basicwx/98fndfd.gif', width="80%"),
           tags$p(),
           tags$hr(),
-          style="text-align: center;",
-          id="NWSplot"
+          style="text-align: center;"
           )
       })
       
@@ -847,11 +865,10 @@ mapServer <- function(id){
         html.str <- paste0("https://embed.windy.com/embed2.html?lat=", (round(lat(),3)),"&lon=", (round(lon(),3)),"&detailLat=", round(lat(),3),"&detailLon=", round(lon(),3),"&width=650&height=650&zoom=7&level=surface&overlay=wind&product=ecmwf&menu=&message=&marker=true&calendar=24&pressure=true&type=map&location=coordinates&detail=&metricWind=mph&metricTemp=default&radarRange=-1")
         # <iframe width="650" height="650" src= frameborder="0"></iframe>
         tags$div(
-          tags$iframe(src=html.str, width="80%", height="650", name="Windy"),
+          tags$iframe(src=html.str, width="80%", style="height: 100vh;", name="Windy"),
           tags$p(),
           tags$hr(),
-          style="text-align: center;",
-          id="Windy"
+          style="text-align: center;"
         )
       })
     }
