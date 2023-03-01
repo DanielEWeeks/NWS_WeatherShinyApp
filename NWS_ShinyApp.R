@@ -865,7 +865,7 @@ mapServer <- function(id){
         html.str <- paste0("https://embed.windy.com/embed2.html?lat=", (round(lat(),3)),"&lon=", (round(lon(),3)),"&detailLat=", round(lat(),3),"&detailLon=", round(lon(),3),"&width=650&height=650&zoom=7&level=surface&overlay=wind&product=ecmwf&menu=&message=&marker=true&calendar=24&pressure=true&type=map&location=coordinates&detail=&metricWind=mph&metricTemp=default&radarRange=-1")
         # <iframe width="650" height="650" src= frameborder="0"></iframe>
         tags$div(
-          tags$iframe(src=html.str, width="80%", style="height: 100vh;", name="Windy"),
+          tags$iframe(src=html.str, width="95%", style="height: 95vh;", name="Windy"),
           tags$p(),
           tags$hr(),
           style="text-align: center;"
