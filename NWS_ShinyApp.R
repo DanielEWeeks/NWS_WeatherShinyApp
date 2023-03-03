@@ -13,6 +13,7 @@ library(scales)
 library(lubridate)
 library(pander)
 library(shinyWidgets)
+library(shinycssloaders)
 library(maptools)
 library(rebird)
 
@@ -254,9 +255,12 @@ mapUI <- function(id, label = "Location in map"){
     tags$a(href="#Windy","Windy;"),
     tags$a(href="#NWSplot","NWSplot;"),
     tags$a(href="#AFD","AFD"),
+    withSpinner(verbatimTextOutput(ns("alerts")),type=5,proxy.height="50px"),
+    # addSpinner(verbatimTextOutput(ns("alerts")), spin="circle"),
     # textOutput(ns("md")), # for median latitude
     tags$h3("Current conditions"),
-    addSpinner(verbatimTextOutput(ns("current")), spin="circle"),
+    verbatimTextOutput(ns("current")),
+    # addSpinner(verbatimTextOutput(ns("current")), spin="circle"),
     tags$h3("Forecast"),
     verbatimTextOutput(ns("forecast_first_period")),
     plotOutput(ns("TempPlot"), height="auto"),
@@ -636,6 +640,22 @@ mapServer <- function(id){
         weather_list <- weather_list_r()
         forecast <- forecast_r()
         print.weather_forecast(forecast, nperiods = 1)
+      })
+      
+      output$alerts <- renderPrint({
+        req(lat_lon())
+        
+        weather_list <- weather_list_r()
+        Zone <- basename(weather_list$properties$forecastZone)
+        sv <- GET(paste0("https://api.weather.gov/alerts/active/zone/",Zone))
+        alerts <- fromJSON(content(sv, as="text", encoding = "UTF-8"))
+        
+        if (length(alerts$features) > 0) {
+          cat("WEATHER ALERT:", alerts$features$properties$headline,"\n\n")
+          cat("Counties: ",alerts$features$properties$areaDesc,"\n\n")
+          cat(alerts$features$properties$description,"\n\n")
+          cat(alerts$features$properties$instruction,"\n\n")
+        } 
       })
       
       output$TempPlot <- renderPlot(height=800,units="px",{ 
