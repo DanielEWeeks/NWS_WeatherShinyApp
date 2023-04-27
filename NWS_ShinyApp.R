@@ -907,7 +907,9 @@ ui <- fluidPage(
   tabPanel("BirdCast",
            includeHTML("BirdCast.html")),
   tabPanel("eBird",
-           ebirdUI("map2"))
+           ebirdUI("map2")),
+  tabPanel("Cabin Weather",
+           includeHTML("CabinWxStation.html"))
   )
 )
 
