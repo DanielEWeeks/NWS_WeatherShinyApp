@@ -1,0 +1,214 @@
+---
+title: "Exploring OGC WMS"
+author: "Daniel E. Weeks"
+date: "`r format(Sys.time(), '%B %d, %Y, %R')`"
+header-includes:
+- \usepackage{pdflscape}
+- \newcommand{\blandscape}{\begin{landscape}}
+- \newcommand{\elandscape}{\end{landscape}}
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    number_sections: true
+    toc_depth: '3'
+    code_folding: show
+  pdf_document:
+    toc: true
+    number_sections: true
+    toc_depth: 3
+#   md_extensions: +raw_attribute
+---
+
+```{r,echo=FALSE,message=FALSE,warning=FALSE}
+require(knitr)
+# Set so that long lines in R will be wrapped:
+opts_chunk$set(tidy.opts=list(width.cutoff=80),tidy=TRUE)
+```
+
+```{r,echo=FALSE}
+# In the event of a crash, save the working space on exit:
+save_all <- function() {
+  save.image("recover.RData")
+}
+options(error = save_all)
+```
+
+
+# Load Libraries
+
+```{r load_libraries,message=FALSE}
+library(tidyverse)
+library(tidylog)
+library(sf) # simple features packages for handling vector GIS data
+library(httr) # generic webservice package
+library(ows4R) # interface for OGC webservices
+library(leaflet)
+```
+
+# Input directory and files 
+
+```{r}
+# Print the working directory
+getwd()
+```
+The input files used in this analysis are ... and can be found in ... 
+
+# Open Geospatial Consortium (OGC) Web Map Service (WMS)
+
+## Links
+
+https://radar.weather.gov/
+
+See
+
+https://inbo.github.io/tutorials/tutorials/spatial_wms_services/
+
+and
+
+https://enterprise.arcgis.com/en/server/latest/publish-services/windows/communicating-with-a-wms-service-in-a-web-browser.htm
+
+Schema:
+
+https://opengeo.ncep.noaa.gov/geoserver/kpbz/ows?service=wms&version=1.3.0&request=GetCapabilities
+
+## NWS GeoServer and GeoWebCache applications
+
+https://opengeo.ncep.noaa.gov/geoserver/www/index.html
+
+## Example code
+
+```{r}
+wfs_bwk <- "https://opengeo.ncep.noaa.gov/geoserver/kpbz/ows?service=wms&version=1.3.0&request=GetCapabilities"
+```
+
+```{r}
+bwk_client <- WMSClient$new(wfs_bwk)
+bwk_client
+```
+
+```{r}
+bwk_client$getCapabilities()
+```
+# Example WMS request
+
+http://sampleserver1.arcgisonline.com/ArcGIS/services/Specialty/ESRI_StatesCitiesRivers_USA/MapServer/WMSServer?version=1.3.0&request=GetMap&CRS=CRS:84&bbox=-178.217598,18.924782,-66.969271,71.406235&width=760&height=360&layers=0&styles=default&format=image/png
+
+
+https://opengeo.ncep.noaa.gov/geoserver/kpbz/ows?SERVICE=WMS&request=GetMap&WIDTH=760&HEIGHT=360&Layers=kpbz_bsrm&Format=image/png&CRS=CRS:84&bbox=-85.218,35.5312,-75.2172,45.532
+
+minx="-85.218" miny="35.5312" maxx="-75.2172" maxy="45.532"
+
+
+```{r}
+# Pittsburgh
+lon <- -79.915280
+lat <- 40.433810
+
+
+wms_grb <- "https://opengeo.ncep.noaa.gov/geoserver/kpbz/ows?SERVICE=WMS&request=GetMap&WIDTH=760&HEIGHT=360&Layers=kpbz_bsrm&Format=image/png&CRS=CRS:84&bbox=-85.218,35.5312,-75.2172,45.532"
+
+wms_grb <- "https://opengeo.ncep.noaa.gov/geoserver/kpbz/ows?"
+```
+
+# kpbz_bsrm
+
+
+
+```{r}
+leaflet() %>% 
+  addTiles() %>% 
+  setView(lng = lon, lat = lat, zoom = 6.8) %>%
+  addWMSTiles(
+    wms_grb,
+    layers = "kpbz_bsrm",
+    options = WMSTileOptions(format = "image/png", transparent = TRUE)
+  )
+```
+
+
+# kpbz_bdhc
+
+NEXRAD Level 3 Dual-Pol Digital Hydrometeor Classification. This data is provided Multi-Radar-Multi-Sensor (MRMS) algorithm.
+
+```{r}
+leaflet() %>% 
+  addTiles() %>% 
+  setView(lng = lon, lat = lat, zoom = 6.8) %>%
+  addWMSTiles(
+    wms_grb,
+    layers = "kpbz_bdhc",
+    options = WMSTileOptions(format = "image/png", transparent = TRUE)
+  )
+```
+
+
+# kpbz_bdsa
+
+NEXRAD Level 3 Dual-Pol Digital Storm Total Precipitation. This data is provided Multi-Radar-Multi-Sensor (MRMS) algorithm.
+
+```{r}
+leaflet() %>% 
+  addTiles() %>% 
+  setView(lng = lon, lat = lat, zoom = 6.8) %>%
+  addWMSTiles(
+    wms_grb,
+    layers = "kpbz_bdsa",
+    options = WMSTileOptions(format = "image/png", transparent = TRUE)
+  )
+```
+
+# kpbz_bdzd
+
+
+# kpbz_bref_raw
+
+NEXRAD Level 2 Super Resolution Radar Base Reflectivity. This data is provided Multi-Radar-Multi-Sensor (MRMS) algorithm.
+
+```{r}
+leaflet() %>% 
+  addTiles() %>% 
+  setView(lng = lon, lat = lat, zoom = 6.8) %>%
+  addWMSTiles(
+    wms_grb,
+    layers = "kpbz_bref_raw",
+    options = WMSTileOptions(format = "image/png", transparent = TRUE)
+  )
+```
+
+# kpbz_bsrm
+
+NEXRAD Level 3 Storm Relative Mean Radial Velocity. This data is provided Multi-Radar-Multi-Sensor (MRMS) algorithm.
+
+```{r}
+leaflet() %>% 
+  addTiles() %>% 
+  setView(lng = lon, lat = lat, zoom = 6.8) %>%
+  addWMSTiles(
+    wms_grb,
+    layers = "kpbz_bsrm",
+    options = WMSTileOptions(format = "image/png", transparent = TRUE)
+  )
+```
+
+# Composite Reflectivity: kpbz_cref
+
+NEXRAD Level 3 Composite Reflectivity. This data is provided Multi-Radar-Multi-Sensor (MRMS) algorithm.
+
+```{r}
+leaflet() %>% 
+  addTiles() %>% 
+  setView(lng = lon, lat = lat, zoom = 6.8) %>%
+  addWMSTiles(
+    wms_grb,
+    layers = "kpbz_cref",
+    options = WMSTileOptions(format = "image/png", transparent = TRUE)
+  )
+```
+
+# Session Information
+
+```{r}
+sessionInfo()
+```
+
