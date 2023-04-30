@@ -76,6 +76,15 @@ https://opengeo.ncep.noaa.gov/geoserver/kpbz/ows?service=wms&version=1.3.0&reque
 
 https://opengeo.ncep.noaa.gov/geoserver/www/index.html
 
+
+Example gist:
+
+https://rstudio-pubs-static.s3.amazonaws.com/573820_deb44ac63243440b972bf6d1845439c9.html
+
+Resources:
+
+https://mesonet.agron.iastate.edu/ogc/
+
 ## Example code
 
 ```{r}
@@ -108,6 +117,7 @@ lat <- 40.433810
 
 wms_grb <- "https://opengeo.ncep.noaa.gov/geoserver/kpbz/ows?SERVICE=WMS&request=GetMap&WIDTH=760&HEIGHT=360&Layers=kpbz_bsrm&Format=image/png&CRS=CRS:84&bbox=-85.218,35.5312,-75.2172,45.532"
 
+# WMS link
 wms_grb <- "https://opengeo.ncep.noaa.gov/geoserver/kpbz/ows?"
 ```
 
@@ -204,6 +214,108 @@ leaflet() %>%
     layers = "kpbz_cref",
     options = WMSTileOptions(format = "image/png", transparent = TRUE)
   )
+```
+
+
+# Nation-wide composite
+
+Quality Controlled 1km x 1km CONUS Radar Composite Reflectivity. This data is provided Multi-Radar-Multi-Sensor (MRMS) algorithm.
+
+```{r}
+ntl_grb <- "https://opengeo.ncep.noaa.gov:443/geoserver/conus/conus_cref_qcd/ows"
+```
+
+```{r}
+leaflet() %>% 
+  addTiles() %>% 
+  setView(lng = lon, lat = lat, zoom = 5) %>%
+  addWMSTiles(
+    ntl_grb,
+    layers = "conus_cref_qcd",
+    options = WMSTileOptions(format = "image/png", transparent = TRUE)
+  )
+```
+
+
+# Time-enabled national view
+
+This service is time-enabled, meaning clients can submit image requests including a time parameter specified in epoch time format (milliseconds since 00:00 January 1, 1970).The time extent of this service includes the past four hours up to the current time updated approximately every ten minutes. All times are specifed in UTC. If time parameters are omitted, the most recent image will be returned.
+
+```{r}
+ntl_time_grb <- "https://idpgis.ncep.noaa.gov/arcgis/services/radar/radar_base_reflectivity_time/ImageServer/WMSServer"
+```
+
+```{r}
+leaflet() %>% 
+  addTiles() %>% 
+  setView(lng = lon, lat = lat, zoom = 4) %>%
+  addWMSTiles(
+    ntl_time_grb,
+    layers = "radar_base_reflectivity_time",
+    options = WMSTileOptions(format = "image/png", transparent = TRUE)
+  )
+```
+
+# mesonet
+
+Based on example code from this gist:
+
+https://rstudio-pubs-static.s3.amazonaws.com/573820_deb44ac63243440b972bf6d1845439c9.html
+
+
+```{r}
+athens <- leaflet() %>%
+        addProviderTiles(providers$OpenStreetMap) %>%
+        setView(lat=lat, lng=lon, zoom = 4)
+athens %>% addWMSTiles(
+  "http://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r.cgi",
+  layers = "nexrad-n0r-900913",
+  options = WMSTileOptions(format = "image/png", transparent = TRUE),
+  attribution = "Weather data © 2020 IEM Nexrad"
+)
+```
+
+## nexrad-n0q-900913-m05m
+
+```{r}
+athens <- leaflet() %>%
+        addProviderTiles(providers$OpenStreetMap) %>%
+        setView(lat=lat, lng=lon, zoom = 4)
+athens %>% addWMSTiles(
+  "http://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r.cgi",
+  layers = "nexrad-n0r-900913-m05m",
+  options = WMSTileOptions(format = "image/png", transparent = TRUE),
+  attribution = "Weather data © 2020 IEM Nexrad"
+)
+```
+
+## nexrad-n0q-900913-m20m
+
+```{r}
+athens <- leaflet() %>%
+        addProviderTiles(providers$OpenStreetMap) %>%
+        setView(lat=lat, lng=lon, zoom = 4)
+athens %>% addWMSTiles(
+  "http://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r.cgi",
+  layers = "nexrad-n0r-900913-m20m",
+  options = WMSTileOptions(format = "image/png", transparent = TRUE),
+  attribution = "Weather data © 2020 IEM Nexrad"
+)
+```
+
+
+## nexrad-n0q-900913-m55m
+
+```{r}
+athens <- leaflet() %>%
+        addProviderTiles(providers$OpenStreetMap) %>%
+        setView(lat=lat, lng=lon, zoom = 4)
+athens %>% addWMSTiles(
+  "http://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r.cgi",
+  layers = "nexrad-n0r-900913-m50m",
+  options = WMSTileOptions(format = "image/png", transparent = TRUE),
+  attribution = "Weather data © 2020 IEM Nexrad"
+)
 ```
 
 # Session Information

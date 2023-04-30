@@ -261,6 +261,8 @@ mapUI <- function(id, label = "Location in map"){
     tags$h3("Current conditions"),
     verbatimTextOutput(ns("current")),
     # addSpinner(verbatimTextOutput(ns("current")), spin="circle"),
+    tags$h3("Current radar"),
+    leafletOutput(ns("radar")),
     tags$h3("Forecast"),
     verbatimTextOutput(ns("forecast_first_period")),
     plotOutput(ns("TempPlot"), height="auto"),
@@ -571,6 +573,26 @@ mapServer <- function(id){
           addTiles() %>%
           addScaleBar() %>% 
           setView(Lon, Lat, zoom = 17) %>%
+          addMarkers(Lon, Lat, label = "You're here!")
+      })
+      
+      output$radar <- renderLeaflet({
+        req(lat_lon())
+        Lon <- lat_lon()["lon"]
+        names(Lon) <- NULL
+        Lat <- lat_lon()["lat"] 
+        names(Lat) <- NULL
+        ntl_grb <- "https://opengeo.ncep.noaa.gov:443/geoserver/conus/conus_cref_qcd/ows"
+        # smallIcon <- icons(iconWidth = 2, iconHeight = 2)
+        leaflet() %>%
+          addTiles() %>%
+          addScaleBar() %>% 
+          setView(Lon, Lat, zoom = 5) %>%
+          addWMSTiles(
+            ntl_grb,
+            layers = "conus_cref_qcd",
+            options = WMSTileOptions(format = "image/png", transparent = TRUE)
+          ) %>% 
           addMarkers(Lon, Lat, label = "You're here!")
       })
       
