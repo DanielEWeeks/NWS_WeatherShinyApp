@@ -262,6 +262,9 @@ mapUI <- function(id, label = "Location in map"){
     verbatimTextOutput(ns("current")),
     # addSpinner(verbatimTextOutput(ns("current")), spin="circle"),
     tags$h3("Current radar"),
+    tags$h4("Base Reflectivity"),
+    leafletOutput(ns("baseline_radar")),
+    tags$h4("Composite Reflectivity"),
     leafletOutput(ns("radar")),
     tags$h3("Forecast"),
     verbatimTextOutput(ns("forecast_first_period")),
@@ -576,7 +579,28 @@ mapServer <- function(id){
           addMarkers(Lon, Lat, label = "You're here!")
       })
       
+      output$baseline_radar <- renderLeaflet({
+        # Baseline Reflectivity
+        req(lat_lon())
+        Lon <- lat_lon()["lon"]
+        names(Lon) <- NULL
+        Lat <- lat_lon()["lat"] 
+        names(Lat) <- NULL
+        ntlbaseline_grb <- "https://opengeo.ncep.noaa.gov:443/geoserver/conus/conus_bref_qcd/ows"
+        leaflet() %>%
+          addTiles() %>%
+          addScaleBar() %>% 
+          setView(Lon, Lat, zoom = 5) %>%
+          addWMSTiles(
+            ntlbaseline_grb,
+            layers = "conus_bref_qcd",
+            options = WMSTileOptions(format = "image/png", transparent = TRUE)
+          ) %>% 
+          addMarkers(Lon, Lat, label = "You're here!")
+      })
+      
       output$radar <- renderLeaflet({
+        # Composite Reflectivity
         req(lat_lon())
         Lon <- lat_lon()["lon"]
         names(Lon) <- NULL

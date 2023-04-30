@@ -236,6 +236,24 @@ leaflet() %>%
   )
 ```
 
+# Nation-wide baseline
+
+Quality Controlled 1km x 1km CONUS Radar Base Reflectivity. This data is provided Multi-Radar-Multi-Sensor (MRMS) algorithm.
+
+```{r}
+ntlbaseline_grb <- "https://opengeo.ncep.noaa.gov:443/geoserver/conus/conus_bref_qcd/ows"
+```
+
+```{r}
+leaflet() %>% 
+  addTiles() %>% 
+  setView(lng = lon, lat = lat, zoom = 5) %>%
+  addWMSTiles(
+    ntlbaseline_grb,
+    layers = "conus_bref_qcd",
+    options = WMSTileOptions(format = "image/png", transparent = TRUE)
+  )
+```
 
 # Time-enabled national view
 
