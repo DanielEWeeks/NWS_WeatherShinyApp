@@ -38,7 +38,7 @@ RetrieveHotspotsList <- function(lat, lon, back=2, dist = 25) {
 }
 
 HotspotBirdList <- function(i, hotspots, back=2) {
-  hotspotList <- ebirdregion(loc=hotspots$locId[i], back=back)
+  hotspotList <- ebirdregion(loc=hotspots$locId[i], back=back, provisional = TRUE)
   LocName <- sym(paste0(hotspots$locName[i]," (",hotspots$miles[i]," miles)"))
   hotspotList <- hotspotList %>% 
     select(comName,howMany,obsDt) %>% 
@@ -941,7 +941,15 @@ mapServer <- function(id){
   )
 }
 
+# <script type="module" crossorigin src="/assets/index-dead7f6d.js"></script>
+# <link rel="stylesheet" href="/assets/index-ff0860cc.css">
+  
+
 ui <- fluidPage(
+  tags$script(type = "module","crossorigin", src = "assets/index-dead7f6d.js"),
+  tags$head(
+    tags$link(rel = "stylesheet", type = "text/css", href = "assets/index-ff0860cc.css")
+  ),
   tabsetPanel(
     tabPanel("Forecast",
   h2("National Weather Service forecast"),
@@ -955,7 +963,9 @@ ui <- fluidPage(
   tabPanel("eBird",
            ebirdUI("map2")),
   tabPanel("Cabin Weather",
-           includeHTML("CabinWxStation.html"))
+           includeHTML("CabinWxStation.html")),
+  tabPanel("Radar",
+           includeHTML("radar.html"))
   )
 )
 
