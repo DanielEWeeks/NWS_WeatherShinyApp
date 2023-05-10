@@ -946,10 +946,7 @@ mapServer <- function(id){
   
 
 ui <- fluidPage(
-  tags$script(type = "module","crossorigin", src = "assets/index-dead7f6d.js"),
-  tags$head(
-    tags$link(rel = "stylesheet", type = "text/css", href = "assets/index-ff0860cc.css")
-  ),
+
   tabsetPanel(
     tabPanel("Forecast",
   h2("National Weather Service forecast"),
@@ -965,6 +962,10 @@ ui <- fluidPage(
   tabPanel("Cabin Weather",
            includeHTML("CabinWxStation.html")),
   tabPanel("Radar",
+           tags$script(type = "module","crossorigin", src = "assets/index-dead7f6d.js"),
+           tags$head(
+             tags$link(rel = "stylesheet", type = "text/css", href = "assets/index-ff0860cc.css")
+           ),
            includeHTML("radar.html"))
   )
 )
