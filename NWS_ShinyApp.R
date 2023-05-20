@@ -946,7 +946,11 @@ mapServer <- function(id){
   
 
 ui <- fluidPage(
-
+  tags$head(
+    tags$script(src = "https://cdn.rawgit.com/openlayers/openlayers.github.io/master/en/v6.5.0/build/ol.js"),
+    tags$link(rel = "stylesheet", type = "text/css", href = "https://cdn.rawgit.com/openlayers/openlayers.github.io/master/en/v6.5.0/css/ol.css")
+  ),
+  tags$style(HTML("#map { height: 700px; }")),
   tabsetPanel(
     tabPanel("Forecast",
   h2("National Weather Service forecast"),
@@ -961,12 +965,111 @@ ui <- fluidPage(
            ebirdUI("map2")),
   tabPanel("Cabin Weather",
            includeHTML("CabinWxStation.html")),
-  tabPanel("Radar",
-           tags$script(type = "module","crossorigin", src = "assets/index-dead7f6d.js"),
-           tags$head(
-             tags$link(rel = "stylesheet", type = "text/css", href = "assets/index-ff0860cc.css")
-           ),
-           includeHTML("radar.html"))
+  tabPanel(
+    "Radar",
+    tags$div(
+      id = "control-container",
+      class = "btn-group",
+      tags$button(
+        id = "play-button",
+        class = "btn btn-primary",
+        "Play"
+      ),
+      tags$button(
+        id = "pause-button",
+        class = "btn btn-default",
+        "Pause"
+      ),
+      tags$div(
+        id = "time-info",
+        style = "display: inline-block; margin-left: 10px;"
+      )
+    ),
+    tags$div(
+      id = "radar-container",
+      style = "height: 700px;",
+      tags$div(id = "map")
+    )
+  )
+  ),
+  tags$script(HTML('
+    var startDate = new Date(Math.round(Date.now() / 3600000) * 3600000 - 3600000 * 3);
+    var frameRate = 2; // frames per second
+    var animationId = null;
+    var tileLayer;
+    var timeInfo;
+    var currentAnimationFrame = null;
+    var map;
+
+    function updateInfo() {
+      timeInfo.innerHTML = "Current Time: " + startDate.toISOString();
+    }
+
+    function setTime() {
+      startDate.setMinutes(startDate.getMinutes() + 15);
+      if (startDate > Date.now()) {
+        startDate = new Date(Math.round(Date.now() / 3600000) * 3600000 - 3600000 * 3);
+      }
+      var timeParam = startDate.toISOString();
+      tileLayer.getSource().updateParams({ TIME: timeParam });
+      updateInfo();
+    }
+
+    function stop() {
+      if (currentAnimationFrame !== null) {
+        clearInterval(currentAnimationFrame);
+        currentAnimationFrame = null;
+      }
+    }
+
+    function play() {
+      stop();
+      currentAnimationFrame = setInterval(setTime, 1000 / frameRate);
+    }
+
+    $(document).ready(function() {
+      tileLayer = new ol.layer.Tile({
+        extent: ol.proj.transformExtent([-126, 24, -66, 50], "EPSG:4326", "EPSG:3857"),
+        source: new ol.source.TileWMS({
+          attributions: ["Iowa State University"],
+          url: "https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r-t.cgi",
+          params: { LAYERS: "nexrad-n0r-wmst" }
+        })
+      });
+
+      map = new ol.Map({
+        target: "map",
+        layers: [
+          new ol.layer.Tile({
+            source: new ol.source.OSM()
+          }),
+          tileLayer
+        ],
+        view: new ol.View({
+          center: ol.proj.fromLonLat([-98.5, 39.5]),
+          zoom: 5
+        })
+      });
+
+      timeInfo = document.getElementById("time-info");
+
+      $("#play-button").on("click", function() {
+        play();
+      });
+
+      $("#pause-button").on("click", function() {
+        stop();
+      });
+
+      updateInfo();
+      play();
+
+      // Resize the map when the tab is selected
+      $("a[data-toggle=\'tab\']").on("shown.bs.tab", function() {
+        map.updateSize();
+      });
+    });
+  ')
   )
 )
 
