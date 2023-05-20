@@ -967,6 +967,8 @@ ui <- fluidPage(
            includeHTML("CabinWxStation.html")),
   tabPanel(
     "Radar",
+    tags$h1("Base reflectivity"),
+    tags$p("IEM generated CONUS composite of NWS NEXRAD WSR-88D level III base reflectivity from Iowa State University ", HTML('(<a target="_blank" href="https://mesonet.agron.iastate.edu">https://mesonet.agron.iastate.edu</a>).')),
     tags$div(
       id = "control-container",
       class = "btn-group",
@@ -989,7 +991,9 @@ ui <- fluidPage(
       id = "radar-container",
       style = "height: 700px;",
       tags$div(id = "map")
-    )
+    ),
+    tags$br(),
+    tags$p("ChatGPT helped create the code for this panel, based on original example code from ",HTML('<a target="_blank" href="https://openlayers.org/en/latest/examples/wms-time.html">https://openlayers.org/en/latest/examples/wms-time.html</a>'))
   )
   ),
   tags$script(HTML('
