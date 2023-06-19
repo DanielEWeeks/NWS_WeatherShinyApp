@@ -785,11 +785,13 @@ mapServer <- function(id){
         
         hrs <- c(2:13)
         shortTermPrecipProb <- ggplot(data = db[hrs,], aes(x=Time, y=`precipitation probability`)) +
-          geom_col(fill="skyblue") +
-          geom_text(aes(y=`precipitation probability`,label=`precipitation probability`),vjust=-0.2, size=6) +
-          scale_x_datetime(labels = date_format("%H", tz=tz), breaks="1 hours") + 
+          # geom_col(fill="skyblue") +
+          geom_line(linewidth=1.2) + 
+          geom_point() + 
+          geom_text(aes(y=`precipitation probability`,label=`precipitation probability`),vjust=-0.7, size=6) +
+          scale_x_datetime(labels = date_format("%a %H", tz=tz), breaks="1 hours") + 
           ggtitle("12 hour precipitation forecast") +
-          theme(text = element_text(size = 20)) + ylim(c(0,100))
+          theme(axis.text.x=element_text(angle=45,hjust=1), text = element_text(size = 20)) + ylim(c(0,100))
         
         print(shortTermPrecipProb)
       })

@@ -568,8 +568,10 @@ ggplot(data = db[hrs,], aes(x=Time, y=`precipitation probability`)) +
   geom_line() + 
   geom_point() + 
   geom_text(aes(y=`precipitation probability`,label=`precipitation probability`),vjust=-1) +
-  scale_x_datetime(labels = date_format("%H", tz=tz), breaks="1 hours") + ggtitle("12 hour precipitation forecast") +
-  ylim(min(db[hrs,]$`precipitation probability`),max(db[hrs,]$`precipitation probability`)+4)
+  scale_x_datetime(labels = date_format("%a %H", tz=tz), breaks="1 hours") + ggtitle("12 hour precipitation forecast") +
+  ylim(min(db[hrs,]$`precipitation probability`),max(db[hrs,]$`precipitation probability`)+4) +
+            theme(axis.text.x=element_text(angle=45,hjust=1), text = element_text(size = 20)) + ylim(c(0,100))
+
 
 ```
 
