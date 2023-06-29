@@ -697,10 +697,17 @@ mapServer <- function(id){
         alerts <- fromJSON(content(sv, as="text", encoding = "UTF-8"))
         
         if (length(alerts$features) > 0) {
-          cat("WEATHER ALERT:", alerts$features$properties$headline,"\n\n")
-          cat("Counties: ",alerts$features$properties$areaDesc,"\n\n")
-          cat(alerts$features$properties$description,"\n\n")
-          cat(alerts$features$properties$instruction,"\n\n")
+          cat("WEATHER ALERT \n\n")
+          nalerts <- length(alerts$features$properties$headline)
+          for (i in 1:nalerts) {
+            cat(alerts$features$properties$headline[i],"\n\n")
+            cat(alerts$features$properties$parameters$NWSheadline[[i]],"\n\n")
+            cat("Counties: ")
+            writeLines(strwrap(alerts$features$properties$areaDesc[i], width=70))
+            cat("\n\n")
+            cat(alerts$features$properties$description[i],"\n\n")
+            cat("---\n\n")
+          }
         } 
       })
       
