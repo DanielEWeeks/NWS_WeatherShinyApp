@@ -251,6 +251,7 @@ mapUI <- function(id, label = "Location in map"){
     # textOutput(ns("col")),
     tags$h3("Location"),
     textOutput(ns("lat_lon")),
+    # textOutput(ns("UTC_time")),
     tags$a(href="#Forecast","Forecast;"),
     tags$a(href="#Windy","Windy;"),
     tags$a(href="#NWSplot","NWSplot;"),
@@ -484,6 +485,8 @@ mapServer <- function(id){
     id,
     function(input, output, session){
       
+      
+      
       mydata <- reactive({places})
       lat <- reactiveVal()
       lon <- reactiveVal()
@@ -514,6 +517,11 @@ mapServer <- function(id){
         Lats$Lat <- c(Lats$Lat, input$myBtn_lat)
       })
       
+      output$UTC_time <- renderText({
+        now <- Sys.time()
+        attr(now, "tzone") <- "UTC"
+        paste0("UTC Time: ",as.character(now))
+      })
       
       output$col <- renderText({
         Lats$Lat 
@@ -789,17 +797,22 @@ mapServer <- function(id){
         db$Time <- as.POSIXct(db$Time, format="%FT%T",tz="UTC")
         db$Time <- with_tz(db$Time,tz=tz)
         
-        
-        hrs <- c(2:13)
+        SunriseSunset <- SunRiseSet(db=db, tz = tz, lat= lat(), lon=lon())
+
+        hrs <- which(db[,"Time"] >= Sys.time()) -1
+        hrs <- hrs[1:24]
         shortTermPrecipProb <- ggplot(data = db[hrs,], aes(x=Time, y=`precipitation probability`)) +
           # geom_col(fill="skyblue") +
           geom_line(linewidth=1.2) + 
           geom_point() + 
           geom_text(aes(y=`precipitation probability`,label=`precipitation probability`),vjust=-0.7, size=6) +
           scale_x_datetime(labels = date_format("%a %H", tz=tz), breaks="1 hours") + 
-          ggtitle("12 hour precipitation forecast") +
-          theme(axis.text.x=element_text(angle=45,hjust=1), text = element_text(size = 20)) + ylim(c(0,100))
-        
+          ggtitle("24 hour precipitation forecast") +
+          theme(axis.text.x=element_text(angle=45,hjust=1), text = element_text(size = 20)) + 
+          ylim(c(0,100)) +
+          geom_vline(xintercept = SunriseSunset$Sunset) +
+          geom_vline(xintercept = SunriseSunset$Sunrise, col="orange")
+                
         print(shortTermPrecipProb)
       })
       
@@ -967,6 +980,7 @@ ui <- fluidPage(
   mapUI("map1")
     ),
   tabPanel("Maps",
+           fluidRow(textOutput("UTC_time"),align="center"),
            includeHTML("Maps.html")),
   tabPanel("BirdCast",
            includeHTML("BirdCast.html")),
@@ -1089,6 +1103,11 @@ ui <- fluidPage(
 server <- function(input, output, session) {
   mapServer("map1")
   ebirdServer("map2")
+  output$UTC_time <- renderText({
+    now <- Sys.time()
+    attr(now, "tzone") <- "UTC"
+    paste0("UTC Time: ",as.character(now))
+  })
   
 }
 
