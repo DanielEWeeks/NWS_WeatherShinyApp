@@ -52,6 +52,7 @@ library(lubridate)
 library(ggrepel)
 library(pander)
 library(maptools)
+library(airnow)
 ```
 
 # Input directory and files 
@@ -89,6 +90,10 @@ This code is based on Joe Guiness' YouTube tutorial:
 # Oradell
 lat <- 40.77322
 lon <- -74.21945
+
+# Cabin
+lat <- 41.159830 
+lon <- -79.763570
 
 # Pittsburgh
 lon <- -79.915280
@@ -770,6 +775,17 @@ for (i in 1:nalerts) {
 # cat(alerts$features$properties$description,"\n\n")
 # cat(alerts$features$properties$instruction,"\n\n")
 }
+```
+
+# AirNow
+
+```{r}
+aqi.df <- get_airnow_conditions(latitude = lat, longitude = lon, distance = 50)
+
+aqi.report <- aqi.df[,c("reporting_area","parameter","aqi","category_name")]
+names(aqi.report) <- c("Reporting Area", "Pollutant","AQI","Condition")
+pander(aqi.report, caption="Air quality coniditions from AirNow")
+pandoc.footnote("Data from the EPA AirNow, state, local, and tribal air quality agencies. A list of state/local/tribal agencies can be found at http://www.airnow.gov/index.cfm?action=airnow.partnerslist")
 ```
 
 

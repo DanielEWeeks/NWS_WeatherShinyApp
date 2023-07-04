@@ -16,6 +16,7 @@ library(shinyWidgets)
 library(shinycssloaders)
 library(maptools)
 library(rebird)
+library(airnow)
 
 # Read in the places table containing data on their latitude and longitude
 places <- read.table("places.txt",header=TRUE)
@@ -261,6 +262,8 @@ mapUI <- function(id, label = "Location in map"){
     # textOutput(ns("md")), # for median latitude
     tags$h3("Current conditions"),
     verbatimTextOutput(ns("current")),
+    tags$h3("Air quality conditions from AirNow"),
+    verbatimTextOutput(ns("AQI")),
     # addSpinner(verbatimTextOutput(ns("current")), spin="circle"),
     tags$h3("Current radar"),
     tags$h4("Base Reflectivity"),
@@ -645,7 +648,16 @@ mapServer <- function(id){
         pander(current_conditions[,c("Name","Conditions" , "Temperature",
 "WindChill" ,  "Wind", "WindGusts")], split.table=200)
       })
-      
+
+      output$AQI <- renderPrint({
+        req(lat_lon())
+        aqi.df <- get_airnow_conditions(latitude = lat(), longitude = lon(), distance = 50)
+        aqi.report <- aqi.df[,c("reporting_area","parameter","aqi","category_name")]
+        names(aqi.report) <- c("Reporting Area", "Pollutant","AQI","Condition")
+        pander(aqi.report)
+        pandoc.footnote("Data from the EPA AirNow program, state, local, and tribal air quality agencies. A list of state/local/tribal agencies can be found at http://www.airnow.gov/index.cfm?action=airnow.partnerslist")
+      })
+            
       output$sunrise <- renderPrint({
         req(lat_lon())
         weather_list <- weather_list_r()
