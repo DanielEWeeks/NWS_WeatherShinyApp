@@ -785,8 +785,27 @@ aqi.df <- get_airnow_conditions(latitude = lat, longitude = lon, distance = 50)
 aqi.report <- aqi.df[,c("reporting_area","parameter","aqi","category_name")]
 names(aqi.report) <- c("Reporting Area", "Pollutant","AQI","Condition")
 pander(aqi.report, caption="Air quality coniditions from AirNow")
-pandoc.footnote("Data from the EPA AirNow, state, local, and tribal air quality agencies. A list of state/local/tribal agencies can be found at http://www.airnow.gov/index.cfm?action=airnow.partnerslist")
+# pandoc.footnote("Data from the EPA AirNow, state, local, and tribal air quality agencies. A list of state/local/tribal agencies can be found at http://www.airnow.gov/index.cfm?action=airnow.partnerslist")
+
+airnow.credits <- "Data from the EPA AirNow, state, local, and tribal air quality agencies. A list of state/local/tribal agencies can be found at http://www.airnow.gov/index.cfm?action=airnow.partnerslist"
+writeLines(strwrap(airnow.credits, width=70))
+cat("\n")
 ```
+
+```{r}
+airnow.forecast <- get_airnow_forecast(latitude = lat, longitude = lon, distance = 50)
+names(airnow.forecast)[which(names(airnow.forecast) =="parameter")] <- "Pollutant"
+names(airnow.forecast)[which(names(airnow.forecast) =="aqi")]  <- "AQI"
+names(airnow.forecast)[which(names(airnow.forecast) =="category_name")] <- "Condition"
+names(airnow.forecast)[which(names(airnow.forecast) =="date_forecast")] <- "Forecast Date"
+pander(airnow.forecast %>% select(`Forecast Date`,Pollutant, AQI,Condition))
+
+cat("\nAirNow Discussion\n")
+writeLines(strwrap(airnow.forecast$discussion[1], width=70))
+cat("\n")
+```
+
+
 
 
 # Session Information

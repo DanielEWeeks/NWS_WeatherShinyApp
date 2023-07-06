@@ -655,8 +655,25 @@ mapServer <- function(id){
         aqi.report <- aqi.df[,c("reporting_area","parameter","aqi","category_name")]
         names(aqi.report) <- c("Reporting Area", "Pollutant","AQI","Condition")
         pander(aqi.report)
-        pandoc.footnote("Data from the EPA AirNow program, state, local, and tribal air quality agencies. A list of state/local/tribal agencies can be found at http://www.airnow.gov/index.cfm?action=airnow.partnerslist")
-      })
+
+        airnow.forecast <- get_airnow_forecast(latitude = lat(), longitude = lon(), distance = 50)
+        names(airnow.forecast)[which(names(airnow.forecast) =="parameter")] <- "Pollutant"
+        names(airnow.forecast)[which(names(airnow.forecast) =="aqi")]  <- "AQI"
+        names(airnow.forecast)[which(names(airnow.forecast) =="category_name")] <- "Condition"
+        names(airnow.forecast)[which(names(airnow.forecast) =="date_forecast")] <- "Forecast Date"
+        pander(airnow.forecast %>% select(`Forecast Date`,Pollutant, AQI,Condition))
+        
+        if (nchar(airnow.forecast$discussion[1]) > 1) {
+          cat("\nAirNow Discussion\n")
+          writeLines(strwrap(airnow.forecast$discussion[1], width=70))
+          cat("\n")
+        }
+        
+        cat("\nAcknowledgment\n")
+        airnow.credits <- "Data from the EPA AirNow, state, local, and tribal air quality agencies. A list of state/local/tribal agencies can be found at http://www.airnow.gov/index.cfm?action=airnow.partnerslist"
+        writeLines(strwrap(airnow.credits, width=70))
+        cat("\n")  
+        })
             
       output$sunrise <- renderPrint({
         req(lat_lon())
