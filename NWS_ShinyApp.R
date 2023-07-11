@@ -202,7 +202,8 @@ get_current_conditions <- function(weather_list, nrows=6) {
   
   # head(stations_df)
   stations_df$Conditions <- NA
-  stations_df$Temperature <- NA
+  stations_df$Temp <- NA
+  stations_df$Humidity <- NA
   stations_df$WindChill <- NA
   stations_df$Wind <- NA
   stations_df$WindGusts <- NA
@@ -214,7 +215,7 @@ get_current_conditions <- function(weather_list, nrows=6) {
     # current$properties$textDescription
     
     if (!is.null(current$properties$temperature$value)) {
-      stations_df$Temperature[i] <- round(32 + (9/5)*current$properties$temperature$value,1)
+      stations_df$Temp[i] <- round(32 + (9/5)*current$properties$temperature$value,1)
     }
     stations_df$Conditions[i] <- current$properties$textDescription
     if (!is.null(current$properties$windChill$value)) {
@@ -224,7 +225,10 @@ get_current_conditions <- function(weather_list, nrows=6) {
       stations_df$Wind[i] <- round(current$properties$windSpeed$value/1.609344,1)
     }
     if (!is.null(current$properties$windGust$value)) {
-      stations_df$WindGusts[i] <- round(current$properties$windGust$value/1.609344,1)
+      stations_df$WindGusts[i] <- current$properties$windGust$value/1.609344
+    }
+    if (!is.null(current$properties$relativeHumidity$value)) {
+      stations_df$Humidity[i] <- round(current$properties$relativeHumidity$value,1)
     }
     
   }
@@ -645,8 +649,8 @@ mapServer <- function(id){
         req(lat_lon())
         weather_list <- weather_list_r()
         current_conditions <- get_current_conditions(weather_list)
-        pander(current_conditions[,c("Name","Conditions" , "Temperature",
-"WindChill" ,  "Wind", "WindGusts")], split.table=200)
+        pander(current_conditions[,c("Name","Conditions" , "Temp",
+"WindChill" ,"Humidity", "Wind", "WindGusts")], split.table=Inf)
       })
 
       output$AQI <- renderPrint({

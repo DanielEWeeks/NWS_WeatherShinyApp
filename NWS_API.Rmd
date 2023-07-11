@@ -322,7 +322,8 @@ get_current_conditions <- function(weather_list, nrows=6) {
   
   # head(stations_df)
   stations_df$Conditions <- NA
-  stations_df$Temperature <- NA
+  stations_df$Temp <- NA
+  stations_df$Humidity <- NA
   stations_df$WindChill <- NA
   stations_df$Wind <- NA
   stations_df$WindGusts <- NA
@@ -334,17 +335,20 @@ get_current_conditions <- function(weather_list, nrows=6) {
     # current$properties$textDescription
     
     if (!is.null(current$properties$temperature$value)) {
-      stations_df$Temperature[i] <- round(32 + (9/5)*current$properties$temperature$value,1)
+      stations_df$Temp[i] <- round(32 + (9/5)*current$properties$temperature$value,1)
     }
     stations_df$Conditions[i] <- current$properties$textDescription
     if (!is.null(current$properties$windChill$value)) {
       stations_df$WindChill[i] <- round(32 + (9/5)*current$properties$windChill$value,1)
     }
     if (!is.null(current$properties$windSpeed$value)) {
-      stations_df$Wind[i] <- current$properties$windSpeed$value/1.609344
+      stations_df$Wind[i] <- round(current$properties$windSpeed$value/1.609344,1)
     }
     if (!is.null(current$properties$windGust$value)) {
       stations_df$WindGusts[i] <- current$properties$windGust$value/1.609344
+    }
+       if (!is.null(current$properties$relativeHumidity$value)) {
+      stations_df$Humidity[i] <- round(current$properties$relativeHumidity$value,1)
     }
     
   }
@@ -356,7 +360,7 @@ get_current_conditions <- function(weather_list, nrows=6) {
 
 current_conditions <- get_current_conditions(weather_list)
 
-current_conditions %>% select(Name, Conditions, Temperature, WindChill, Wind, WindGusts) %>% pander()
+current_conditions %>% select(Name, Conditions, Temp, WindChill, Humidity, Wind, WindGusts) %>% pander(split.table = Inf)
 ```
 
 
