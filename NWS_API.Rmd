@@ -571,6 +571,18 @@ db$Time <- with_tz(db$Time,tz=tz)
 
 ### Short-term hourly precipitation forecast
 
+Complete and fill based on this StackOverflow entry:
+
+https://stackoverflow.com/questions/49242259/expand-rows-of-data-frame-date-time-column-with-intervening-date-times
+
+```{r}
+# Complete and fill
+res <- complete(db, Time = full_seq(Time, period = 60 ** 2))
+res <- res %>% fill(`precipitation probability`)
+db <- as.data.frame(res)
+
+```
+
 ```{r}
 SunriseSunset <- SunRiseSet(db=db, tz = tz, lat= lat, lon=lon)
 
@@ -591,6 +603,8 @@ pPrecip +
     geom_vline(xintercept = SunriseSunset$Sunset) +
     geom_vline(xintercept = SunriseSunset$Sunrise, col="orange")
 ```
+
+
 
 
 ```{r}

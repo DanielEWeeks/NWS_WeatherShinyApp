@@ -830,6 +830,14 @@ mapServer <- function(id){
         db$Time <- as.POSIXct(db$Time, format="%FT%T",tz="UTC")
         db$Time <- with_tz(db$Time,tz=tz)
         
+        # Complete and fill
+        res <- complete(db, Time = full_seq(Time, period = 60 ** 2))
+        res <- res %>% fill(`precipitation probability`)
+        db <- as.data.frame(res)
+        db$lab <- as.character(db$`precipitation probability`)
+        db$lab[1:length(db$`precipitation probability`) %% 4 != 1] <- NA
+        
+        
         SunriseSunset <- SunRiseSet(db=db, tz = tz, lat= lat(), lon=lon())
 
         hrs <- which(db[,"Time"] >= Sys.time()) -1
@@ -864,9 +872,16 @@ mapServer <- function(id){
         db$Time <- as.POSIXct(db$Time, format="%FT%T",tz="UTC")
         db$Time <- with_tz(db$Time,tz=tz)
         
-        tmp <- db
+        # Complete and fill
+        res <- complete(db, Time = full_seq(Time, period = 60 ** 2))
+        res <- res %>% fill(`precipitation probability`)
+        db <- as.data.frame(res)
+        db$lab <- as.character(db$`precipitation probability`)
+        db$lab[1:length(db$`precipitation probability`) %% 4 != 1] <- NA
+
+        tmp <- db[!is.na(db$lab),]
         tmp$y <- "Precip. Prob."
-        tmp$hj <- rep(c(0.8,0,-0.8), length.out=nrow(db))
+        tmp$hj <- rep(c(0.8,0,-0.8), length.out=nrow(tmp))
         
         hPrecipProb <- ggplot(data=tmp, aes(x=y,y=Time,fill=`precipitation probability`)) + 
           geom_tile(height=3600*1) +
@@ -889,6 +904,13 @@ mapServer <- function(id){
         db1 <- rename(db1, Time=validTime, `sky cover`=value)
         db1$Time <- as.POSIXct(db1$Time, format="%FT%T",tz="UTC")
         db1$Time <- with_tz(db1$Time,tz=tz)
+        
+        # Complete and fill
+        res <- complete(db1, Time = full_seq(Time, period = 60 ** 2))
+        res <- res %>% fill(`sky cover`)
+        db1 <- as.data.frame(res)
+        
+        
         tmp <- db1
         tmp$y <- "Sky Cover"
         
