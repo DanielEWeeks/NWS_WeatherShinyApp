@@ -17,6 +17,7 @@ library(shinycssloaders)
 library(maptools)
 library(rebird)
 library(airnow)
+library(tidyr)
 
 # Read in the places table containing data on their latitude and longitude
 places <- read.table("places.txt",header=TRUE)
