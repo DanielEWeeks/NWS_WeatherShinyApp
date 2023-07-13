@@ -1129,7 +1129,7 @@ ui <- fluidPage(
           tileLayer
         ],
         view: new ol.View({
-          center: ol.proj.fromLonLat([-98.5, 39.5]),
+          center: ol.proj.fromLonLat([-79.5, 39.5]),
           zoom: 5
         })
       });
