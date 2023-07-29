@@ -611,7 +611,10 @@ pPrecip +
 ggplot(data = db[hrs,], aes(x=Time, y=`precipitation probability`)) +
   geom_col(fill="skyblue") +
     geom_text(aes(y=`precipitation probability`,label=`precipitation probability`),vjust=-0.2) +
-   scale_x_datetime(labels = date_format("%H", tz=tz), breaks="1 hours") + ggtitle("12 hour precipitation forecast")
+   scale_x_datetime(labels = date_format("%H", tz=tz), breaks="1 hours") +
+    geom_vline(xintercept = SunriseSunset$Sunset) +
+    geom_vline(xintercept = SunriseSunset$Sunrise, col="orange")
+  ggtitle("12 hour precipitation forecast")
 ```
 
 
@@ -684,6 +687,34 @@ scale_fill_gradient2(low="gray", high="blue", limits= c(0,100)) +
 
 hPrecipProb
 ```
+
+```{r}
+        res <- complete(db, Time = full_seq(Time, period = 60 ** 2))
+        res <- res %>% fill(`precipitation probability`)
+        db <- as.data.frame(res)
+        db$lab <- as.character(db$`precipitation probability`)
+        db$lab[1:length(db$`precipitation probability`) %% 4 != 1] <- NA
+
+        tmp <- db[!is.na(db$lab),]
+        tmp$y <- "Precip. Prob."
+        tmp$hj <- rep(c(0.8,0,-0.8), length.out=nrow(tmp))
+hPrecipProb <- ggplot(data=tmp, aes(x=y,y=Time,fill=`precipitation probability`)) + 
+          geom_tile(height=3600*5) +
+          geom_text_repel(aes(label=`precipitation probability`), size=5, point.size=NA, direction="x", min.segment.length = 10, na.rm = TRUE, verbose = FALSE) +
+          scale_y_datetime(labels = date_format("%a %H", tz=tz), breaks="6 hours") +
+          coord_y_datetime(ylim = c(max(tmp$Time), min(tmp$Time))) +
+          scale_fill_gradient2(low="gray", high="blue", limits= c(0,100)) +
+          theme_minimal() +
+          theme(axis.ticks.x=element_blank(),
+                axis.title.x = element_blank(),
+                axis.line.y = element_blank(),
+                panel.grid.major = element_blank(), 
+                panel.grid.minor = element_blank(),
+                text = element_text(size = 20)) +
+          ggtitle("Precipitation Probability")
+hPrecipProb
+```
+
 
 
 # Weather

@@ -259,6 +259,7 @@ mapUI <- function(id, label = "Location in map"){
     textOutput(ns("lat_lon")),
     # textOutput(ns("UTC_time")),
     tags$a(href="#Forecast","Forecast;"),
+    tags$a(href="#AQI","AQI;"),
     tags$a(href="#Windy","Windy;"),
     tags$a(href="#NWSplot","NWSplot;"),
     tags$a(href="#AFD","AFD"),
@@ -267,15 +268,13 @@ mapUI <- function(id, label = "Location in map"){
     # textOutput(ns("md")), # for median latitude
     tags$h3("Current conditions"),
     verbatimTextOutput(ns("current")),
-    tags$h3("Air quality conditions from AirNow"),
-    verbatimTextOutput(ns("AQI")),
     # addSpinner(verbatimTextOutput(ns("current")), spin="circle"),
-    tags$h3("Current radar"),
-    tags$h4("Base Reflectivity"),
-    leafletOutput(ns("baseline_radar")),
-    tags$h4("Composite Reflectivity"),
-    leafletOutput(ns("radar")),
     tags$h3("Forecast"),
+    # tags$h4("Base Reflectivity"),
+    # leafletOutput(ns("baseline_radar")),
+    tags$h4("Current Radar - Composite Reflectivity"),
+    leafletOutput(ns("radar")),
+    tags$h4("Today's Forecast"),
     verbatimTextOutput(ns("forecast_first_period")),
     plotOutput(ns("TempPlot"), height="auto"),
     plotOutput(ns("ShortTermPrecipProb"), height="auto"),
@@ -283,26 +282,39 @@ mapUI <- function(id, label = "Location in map"){
     plotOutput(ns("BarometerPlot"), height="auto"),
     tags$div(id="Forecast"),
     tags$a(href="#Top","Top;"),
+    tags$a(href="#AQI","AQI;"),
     tags$a(href="#Windy","Windy;"),
     tags$a(href="#NWSplot","NWSplot;"),
     tags$a(href="#AFD","AFD"),
     verbatimTextOutput(ns("forecast")),
+    tags$div(id="AQI"),
+    tags$a(href="#Top","Top;"),
+    tags$a(href="#Forecast","Forecast;"),
+    tags$a(href="#AQI","AQI;"),
+    tags$a(href="#Windy","Windy;"),
+    tags$a(href="#NWSplot","NWSplot;"),
+    tags$a(href="#AFD","AFD"),
+    tags$h3("Air quality conditions from AirNow"),
+    verbatimTextOutput(ns("AQI")),
     verbatimTextOutput(ns("sunrise")),
     tags$div(id="Windy"),
     tags$a(href="#Top","Top;"),
     tags$a(href="#Forecast","Forecast;"),
+    tags$a(href="#AQI","AQI;"),
     tags$a(href="#NWSplot","NWSplot;"),
     tags$a(href="#AFD","AFD"),
     htmlOutput(ns("Windy")),
     tags$div(id="NWSplot"),
     tags$a(href="#Top","Top;"),
     tags$a(href="#Forecast","Forecast;"),
+    tags$a(href="#AQI","AQI;"),
     tags$a(href="#Windy","Windy;"),
     tags$a(href="#AFD","AFD"),
     htmlOutput(ns("NWSPlot")),
     tags$div(id="AFD"),
     tags$a(href="#Top","Top;"),
     tags$a(href="#Forecast","Forecast;"),
+    tags$a(href="#AQI","AQI;"),
     tags$a(href="#Windy","Windy;"),
     tags$a(href="#NWSplot","NWSplot"),
     verbatimTextOutput(ns("ForecastDiscussion")),
@@ -885,7 +897,7 @@ mapServer <- function(id){
         tmp$hj <- rep(c(0.8,0,-0.8), length.out=nrow(tmp))
         
         hPrecipProb <- ggplot(data=tmp, aes(x=y,y=Time,fill=`precipitation probability`)) + 
-          geom_tile(height=3600*1) +
+          geom_tile(height=3600*5) +
           geom_text_repel(aes(label=`precipitation probability`), size=5, point.size=NA, direction="x", min.segment.length = 10, na.rm = TRUE, verbose = FALSE) +
           scale_y_datetime(labels = date_format("%a %H", tz=tz), breaks="6 hours") +
           coord_y_datetime(ylim = c(max(tmp$Time), min(tmp$Time))) +
@@ -1077,6 +1089,7 @@ ui <- fluidPage(
   ),
   tags$script(HTML('
     var startDate = new Date(Math.round(Date.now() / 3600000) * 3600000 - 3600000 * 3);
+    var timeNow = new Date(Date.now())
     var frameRate = 2; // frames per second
     var animationId = null;
     var tileLayer;
@@ -1085,7 +1098,7 @@ ui <- fluidPage(
     var map;
 
     function updateInfo() {
-      timeInfo.innerHTML = "Current Time: " + startDate.toISOString();
+      timeInfo.innerHTML = "Current Time: " + timeNow.toISOString() +"; Frame Time: " + startDate.toISOString();
     }
 
     function setTime() {
