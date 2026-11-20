@@ -39,12 +39,32 @@ RetrieveHotspotsList <- function(lat, lon, back=2, dist = 25) {
   }
 }
 
-HotspotBirdList <- function(i, hotspots, back=2) {
-  hotspotList <- ebirdregion(loc=hotspots$locId[i], back=back, provisional = TRUE)
-  LocName <- sym(paste0(hotspots$locName[i]," (",hotspots$miles[i]," miles)"))
-  hotspotList <- hotspotList %>% 
-    select(comName,howMany,obsDt) %>% 
-    rename(Date=obsDt,!!LocName:=comName,Number=howMany)
+# HotspotBirdList <- function(i, hotspots, back=2) {
+#   hotspotList <- ebirdregion(loc=hotspots$locId[i], back=back, provisional = TRUE)
+#   LocName <- sym(paste0(hotspots$locName[i]," (",hotspots$miles[i]," miles)"))
+#   hotspotList <- hotspotList %>% 
+#     select(comName,howMany,obsDt) %>% 
+#     rename(Date=obsDt,!!LocName:=comName,Number=howMany)
+# }
+
+HotspotBirdList <- function(i, hotspots, back = 2) {
+  hotspotList <- suppressWarnings(
+    ebirdhotspot(
+      locID = hotspots$locId[i],
+      back = back,
+      provisional = TRUE
+    )
+  )
+  
+  LocName <- sym(paste0(hotspots$locName[i], " (", hotspots$miles[i], " miles)"))
+  if (nrow(hotspotList) > 0) {
+    hotspotList <- hotspotList %>%
+      select(comName, howMany, obsDt) %>%
+      rename(Date = obsDt, !!LocName := comName, Number = howMany)
+  } else {
+    hotspotList <- data.frame(Message = paste("No recent sightings at", hotspots$locName[i]))
+  }
+  hotspotList
 }
 
 eBirdNotables <- function(lat, lon, back=7, dist=25, maxN = 25) {
